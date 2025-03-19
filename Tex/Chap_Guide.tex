@@ -8,11 +8,11 @@
     \item 安装软件：根据所用操作系统和章节~\ref{sec:system}中的信息安装\LaTeX{}编译环境。
     \item 获取模板：下载 \href{https://github.com/mohuangrui/ucasthesis}{ucasthesis} 模板并解压。ucasthesis模板不仅提供了相应的类文件，同时也提供了包括参考文献等在内的完成学位论文的一切要素，所以，下载时，推荐下载整个ucasthesis文件夹，而不是单独的文档类。
     \item 编译模板：
-        \begin{enumerate}
-            \item Windows：双击运行artratex.bat脚本。
-            \item Linux或MacOS: {\scriptsize \verb|terminal| -> \verb|chmod +x ./artratex.sh| -> \verb|./artratex.sh xa|}
-            \item 任意系统：都可使用\LaTeX{}编辑器打开Thesis.tex文件并选择xelatex编译引擎进行编译。
-        \end{enumerate}
+          \begin{enumerate}
+              \item Windows：双击运行artratex.bat脚本。
+              \item Linux或MacOS: {\scriptsize \verb|terminal| -> \verb|chmod +x ./artratex.sh| -> \verb|./artratex.sh xa|}
+              \item 任意系统：都可使用\LaTeX{}编辑器打开Thesis.tex文件并选择xelatex编译引擎进行编译。
+          \end{enumerate}
     \item 错误处理：若编译中遇到了问题，请先查看“常见问题”（章节~\ref{sec:qa}）。
 \end{enumerate}
 
@@ -29,10 +29,10 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
 \begin{itemize}
     \item Windows：双击Dos脚本artratex.bat可得全编译后的PDF文档，其存在是为了帮助不了解\LaTeX{}编译过程的初学者跨过编译这第一道坎，请勿通过邮件传播和接收此脚本，以防范Dos脚本的潜在风险。
     \item Linux或MacOS：在terminal中运行
-        \begin{itemize}
-            \item \verb|./artratex.sh xa|：获得全编译后的PDF文档
-            \item \verb|./artratex.sh x|：快速编译，不会生成文献引用
-        \end{itemize}
+          \begin{itemize}
+              \item \verb|./artratex.sh xa|：获得全编译后的PDF文档
+              \item \verb|./artratex.sh x|：快速编译，不会生成文献引用
+          \end{itemize}
 \end{itemize}
 
 全编译指运行 \verb|xelatex+bibtex+xelatex+xelatex| 以正确生成所有的引用链接，如目录，参考文献及引用等。在写作过程中若无添加新的引用，则可用快速编译，即只运行一遍\LaTeX{}编译引擎以减少编译时间。
@@ -83,8 +83,8 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
 \begin{equation} \label{eq:ns}
     \adddotsbeforeeqnnum%
     \begin{cases}
-        \frac{\partial \rho}{\partial t} + \nabla\cdot(\rho\Vector{V}) = 0 \ \mathrm{times\ math\ test: 1,2,3,4,5}, 1,2,3,4,5\\
-        \frac{\partial (\rho\Vector{V})}{\partial t} + \nabla\cdot(\rho\Vector{V}\Vector{V}) = \nabla\cdot\Tensor{\sigma} \ \text{times text test: 1,2,3,4,5}\\
+        \frac{\partial \rho}{\partial t} + \nabla\cdot(\rho\Vector{V}) = 0 \ \mathrm{times\ math\ test: 1,2,3,4,5}, 1,2,3,4,5                                 \\
+        \frac{\partial (\rho\Vector{V})}{\partial t} + \nabla\cdot(\rho\Vector{V}\Vector{V}) = \nabla\cdot\Tensor{\sigma} \ \text{times text test: 1,2,3,4,5} \\
         \frac{\partial (\rho E)}{\partial t} + \nabla\cdot(\rho E\Vector{V}) = \nabla\cdot(k\nabla T) + \nabla\cdot(\Tensor{\sigma}\cdot\Vector{V})
     \end{cases}
 \end{equation}
@@ -94,9 +94,9 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
 \end{equation}
 \[
     \begin{split}
-        \mathcal{L} \{f\}(s) &= \int _{0^{-}}^{\infty} f(t) e^{-st} \, \mathrm{d}t, \ 
-        \mathscr{L} \{f\}(s) = \int _{0^{-}}^{\infty} f(t) e^{-st} \, \mathrm{d}t\\
-        \mathcal{F} {\bigl (} f(x+x_{0}) {\bigr )} &= \mathcal{F} {\bigl (} f(x) {\bigr )} e^{2\pi i\xi x_{0}}, \ 
+        \mathcal{L} \{f\}(s)                       & = \int _{0^{-}}^{\infty} f(t) e^{-st} \, \mathrm{d}t, \
+        \mathscr{L} \{f\}(s) = \int _{0^{-}}^{\infty} f(t) e^{-st} \, \mathrm{d}t                                  \\
+        \mathcal{F} {\bigl (} f(x+x_{0}) {\bigr )} & = \mathcal{F} {\bigl (} f(x) {\bigr )} e^{2\pi i\xi x_{0}}, \
         \mathscr{F} {\bigl (} f(x+x_{0}) {\bigr )} = \mathscr{F} {\bigl (} f(x) {\bigr )} e^{2\pi i\xi x_{0}}
     \end{split}
 \]
@@ -106,22 +106,22 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
 \subsection{数学环境}
 
 \begin{axiom}
-   这是一个公理。 
+    这是一个公理。
 \end{axiom}
 \begin{theorem}
-   这是一个定理。 
+    这是一个定理。
 \end{theorem}
 \begin{lemma}
-   这是一个引理。 
+    这是一个引理。
 \end{lemma}
 \begin{corollary}
-   这是一个推论。 
+    这是一个推论。
 \end{corollary}
 \begin{assertion}
-   这是一个断言。 
+    这是一个断言。
 \end{assertion}
 \begin{proposition}
-   这是一个命题。 
+    这是一个命题。
 \end{proposition}
 \begin{proof}
     这是一个证明。
@@ -148,13 +148,13 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
     \renewcommand{\arraystretch}{1.2}%row space 
     \begin{tabular}{lcccccccc}
         \hline
-        行号 & \multicolumn{8}{c}{跨多列的标题}\\
+        行号    & \multicolumn{8}{c}{跨多列的标题}                                           \\
         %\cline{2-9}% partial hline from column i to column j
         \hline
-        Row 1 & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$\\
-        Row 2 & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$\\
-        Row 3 & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$\\
-        Row 4 & $1$ & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$\\
+        Row 1 & $1$                        & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$ \\
+        Row 2 & $1$                        & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$ \\
+        Row 3 & $1$                        & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$ \\
+        Row 4 & $1$                        & $2$ & $3$ & $4$ & $5$ & $6$ & $7$ & $8$ \\
         \hline
     \end{tabular}
 \end{table}
@@ -186,27 +186,27 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
 \begin{figure}[!htbp]
     \centering
     \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{oaspl_a}
-      \caption{}
-      \label{fig:oaspl_a}
+        \includegraphics[width=\textwidth]{oaspl_a}
+        \caption{}
+        \label{fig:oaspl_a}
     \end{subfigure}%
     ~% add desired spacing
     \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{oaspl_b}
-      \caption{}
-      \label{fig:oaspl_b}
+        \includegraphics[width=\textwidth]{oaspl_b}
+        \caption{}
+        \label{fig:oaspl_b}
     \end{subfigure}
     \\% line break
     \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{oaspl_c}
-      \caption{}
-      \label{fig:oaspl_c}
+        \includegraphics[width=\textwidth]{oaspl_c}
+        \caption{}
+        \label{fig:oaspl_c}
     \end{subfigure}%
     ~% add desired spacing
     \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{oaspl_d}
-      \caption{}
-      \label{fig:oaspl_d}
+        \includegraphics[width=\textwidth]{oaspl_d}
+        \caption{}
+        \label{fig:oaspl_d}
     \end{subfigure}
     \bicaption{总声压级。(a) 这是子图说明信息，(b) 这是子图说明信息，(c) 这是子图说明信息，(d) 这是子图说明信息。}{OASPL.(a) This is the explanation of subfig, (b) This is the explanation of subfig, (c) This is the explanation of subfig, (d) This is the explanation of subfig.}
     \label{fig:oaspl}
@@ -258,11 +258,11 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
 %     \item 模板每次发布前，都已在Windows，Linux，MacOS系统上测试通过。下载模板后，若编译出现错误，则请见 \href{https://github.com/mohuangrui/ucasthesis/wiki}{ucasthesis知识小站} 的 \href{https://github.com/mohuangrui/ucasthesis/wiki/%E7%BC%96%E8%AF%91%E6%8C%87%E5%8D%97}{编译指南}。
 
 %     \item 模板文档的编码为UTF-8编码。所有文件都必须采用UTF-8编码，否则编译后生成的文档将出现乱码文本。若出现文本编辑器无法打开文档或打开文档乱码的问题，请检查编辑器对UTF-8编码的支持。如果使用WinEdt作为文本编辑器（\textbf{不推荐使用}），应在其Options -> Preferences -> wrapping选项卡下将两种Wrapping Modes中的内容：
-        
+
 %         TeX;HTML;ANSI;ASCII|DTX...
-        
+
 %         修改为：TeX;\textbf{UTF-8|ACP;}HTML;ANSI;ASCII|DTX...
-        
+
 %         同时，取消Options -> Preferences -> Unicode中的Enable ANSI Format。
 
 %     \item 推荐选择xelatex或lualatex编译引擎编译中文文档。编译脚本的默认设定为xelatex编译引擎。你也可以选择不使用脚本编译，如直接使用 \LaTeX{}文本编辑器编译。注：\LaTeX{}文本编辑器编译的默认设定为pdflatex编译引擎，若选择xelatex或lualatex编译引擎，请进入下拉菜单选择。为正确生成引用链接和参考文献，需要进行\textbf{全编译}。
@@ -276,7 +276,7 @@ Thesis.tex为主文档，其设计和规划了论文的整体框架，通过对�
 %             \item 使用 Auto Build 编译带有未生成引用链接的源文件，可以仅使用 xelatex 编译带有已经正确生成引用链接的源文件。
 %             \item 编译完成，“查看(View)” PDF，在PDF中 “ctrl+click” 可链接到相对应的源文件。
 %         \end{enumerate}
-    
+
 %     \item 模版的设计可能地考虑了适应性。致谢等所有条目都是通过最为通用的
 
 %         \verb+\chapter{item name}+  and \verb+\section*{item name}+
