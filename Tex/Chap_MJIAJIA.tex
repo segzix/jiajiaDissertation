@@ -1,18 +1,18 @@
 \chapter{多线程 M-JIAJIA 的设计与实现}\label{chap:MJIAJIA}{
-本章主要介绍 M-JIAJIA 的设计与实现，M-JIAJIA 在 JIAJIA 的基础上实现，并继承了域一致性模型，其主要优化集中在通信子系统。M-JIAJIA 采用分层模块化设计，解耦通信层和系统核心模块层，两个层之间通过消息队列进行通信。通信层支持 UDP 通信和 RDMA 通信两种方案，并采用多线程流水化技术优化通信效率。
+    本章主要介绍 M-JIAJIA 的设计与实现，M-JIAJIA 在 JIAJIA 的基础上实现，并继承了域一致性模型，其主要优化集中在通信子系统。M-JIAJIA 采用分层模块化设计，解耦通信层和系统核心模块层，两个层之间通过消息队列进行通信。通信层支持 UDP 通信和 RDMA 通信两种方案，并采用多线程流水化技术优化通信效率。
 
-\section{设计概览}
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=\textwidth]{Img/system-arch.png}
-    \bicaption{M-JIAJIA系统框架图}{M-JIAJIA Sytem Framework Diagram}
-    \label{fig:system-arch}
-\end{figure}
-M-JIAJIA 的整体架构如图~\ref{fig:system-arch} 所示。从上到下依次是应用层、接口层、核心模块层、通信层。其中应用层主要包含了 M-JIAJIA 系统的并行测试程序（将在~\ref{chap:experiments}章节做进一步介绍）。本章节剩余部分将主要介绍接口层、核心模块层、通信层的设计与实现。
+    \section{设计概览}
+    \begin{figure}[!htbp]
+        \centering
+        \includegraphics[width=\textwidth]{Img/system-arch.png}
+        \bicaption{M-JIAJIA系统框架图}{M-JIAJIA Sytem Framework Diagram}
+        \label{fig:system-arch}
+    \end{figure}
+    M-JIAJIA 的整体架构如图~\ref{fig:system-arch} 所示。从上到下依次是应用层、接口层、核心模块层、通信层。其中应用层主要包含了 M-JIAJIA 系统的并行测试程序（将在~\ref{chap:experiments}章节做进一步介绍）。本章节剩余部分将主要介绍接口层、核心模块层、通信层的设计与实现。
 
-\section{函数接口设计}
-M-JIAJIA 在函数接口设计上保持了对 JIAJIA 系统接口的兼容，提供列表~\ref{lst:jia-interface}所示 C 语言的编程接口。主要包括全局变量、系统操作、内存操作、同步操作、消息传递接口、和 RMA（远程内存访问） 接口等。
-\begin{lstlisting}[style=CStyle, caption={M-JIAJIA C 接口总览}, label={lst:jia-interface}]
+    \section{函数接口设计}
+    M-JIAJIA 在函数接口设计上保持了对 JIAJIA 系统接口的兼容，提供列表~\ref{lst:jia-interface}所示 C 语言的编程接口。主要包括全局变量、系统操作、内存操作、同步操作、消息传递接口、和 RMA（远程内存访问） 接口等。
+    \begin{lstlisting}[style=CStyle, caption={M-JIAJIA C 接口总览}, label={lst:jia-interface}]
 /* 全局变量 */
 extern int jiahosts;
 extern int jiapid;
@@ -41,49 +41,49 @@ unsigned char *jia_get(unsigned char *addr);
 void jia_put(char *buf, unsigned char *addr);
 \end{lstlisting}
 
-\subsection{全局变量}
-M-JIAJIA 程序采用单程序多数据（Single Program Multiple Data, SPMD）并行计算模式，运行时系统将同一程序动态部署到分布式计算节点上协同执行。系统向开发者提供两个预定义的全局变量：jiahosts 和 jiapid，分别表示当前并行执行环境的进程总数与本地进程的唯一逻辑标识符。这两个变量在SPMD语义下承担关键角色——jiahosts 用于全局任务规模的静态划分或动态负载均衡，而jiapid 则支持进程间的差异性逻辑分支控制（如主从模式或数据局部性优化）。类似的功能在消息传递接口（Message Passing Interface, MPI）中如OpenMPI需通过显式调用 MPI\_Comm\_size 和 MPI\_Comm\_rank 函数实现，而M-JIAJIA通过隐式全局变量简化了并行编程的复杂性。
-\subsection{系统操作}\label{sec:init}
-系统操作接口包含 jia\_init 和 jia\_exit 两个必要接口。jia\_init 用于完成系统的初始化工作，将调用核心层中的初始化模块（图~\ref{fig:mjiajia-init}）。
-\begin{figure}[!htbp]
-    \centering
-    \includegraphics[width=0.35\textwidth]{Img/M-JIAJIA-init.png}
-    \bicaption{M-JIAJIA 初始化模块}{M-JIAJIA initialization module}
-    \label{fig:mjiajia-init}
-\end{figure}
-相比于 JIAJIA 的初始化模块，M-JIAJIA 做了如下架构改进以满足系统的灵活和可维护性要求：
-\begin{itemize}
-    \item 重构配置文件解析逻辑，实现独立于系统级文件（如 /etc/hosts）的自定义系统配置管理机制；新逻辑只依赖 .jiahosts 文件中提供的IP地址、用户名和密码三元组，计算节点之间的连通性由开发者保证。
-    \item 引入远程工作目录概念，初始化阶段将为远程节点创建程序工作目录。M-JIAJIA 采用主从模式，所有从节点上的进程都会在工作目录 jianode 下执行。
-    \item 动态初始化网络通信栈，根据系统配置自动选择并初始化 UDP 或 RDMA 通信栈。
-\end{itemize}
+    \subsection{全局变量}
+    M-JIAJIA 程序采用单程序多数据（Single Program Multiple Data, SPMD）并行计算模式，运行时系统将同一程序动态部署到分布式计算节点上协同执行。系统向开发者提供两个预定义的全局变量：jiahosts 和 jiapid，分别表示当前并行执行环境的进程总数与本地进程的唯一逻辑标识符。这两个变量在SPMD语义下承担关键角色——jiahosts 用于全局任务规模的静态划分或动态负载均衡，而jiapid 则支持进程间的差异性逻辑分支控制（如主从模式或数据局部性优化）。类似的功能在消息传递接口（Message Passing Interface, MPI）中如OpenMPI需通过显式调用 MPI\_Comm\_size 和 MPI\_Comm\_rank 函数实现，而M-JIAJIA通过隐式全局变量简化了并行编程的复杂性。
+    \subsection{系统操作}\label{sec:init}
+    系统操作接口包含 jia\_init 和 jia\_exit 两个必要接口。jia\_init 用于完成系统的初始化工作，将调用核心层中的初始化模块（图~\ref{fig:mjiajia-init}）。
+    \begin{figure}[!htbp]
+        \centering
+        \includegraphics[width=0.35\textwidth]{Img/M-JIAJIA-init.png}
+        \bicaption{M-JIAJIA 初始化模块}{M-JIAJIA initialization module}
+        \label{fig:mjiajia-init}
+    \end{figure}
+    相比于 JIAJIA 的初始化模块，M-JIAJIA 做了如下架构改进以满足系统的灵活和可维护性要求：
+    \begin{itemize}
+        \item 重构配置文件解析逻辑，实现独立于系统级文件（如 /etc/hosts）的自定义系统配置管理机制；新逻辑只依赖 .jiahosts 文件中提供的IP地址、用户名和密码三元组，计算节点之间的连通性由开发者保证。
+        \item 引入远程工作目录概念，初始化阶段将为远程节点创建程序工作目录。M-JIAJIA 采用主从模式，所有从节点上的进程都会在工作目录 jianode 下执行。
+        \item 动态初始化网络通信栈，根据系统配置自动选择并初始化 UDP 或 RDMA 通信栈。
+    \end{itemize}
 
-jia\_exit 用于收集所有远程节点的统计信息，并在释放系统资源后退出。
-\subsection{内存操作}
-内存操作的核心在于共享内存的分配，其中内存分配算法的选择将直接影响系统的负载均衡、资源利用率和通信开销。具体而言，内存分配算法决定了共享内存如何在不同节点间划分，从而影响任务和数据的分配，进而影响并行计算的效率与性能。合理的内存分配算法能够减少节点间的通信延迟，提升系统的可扩展性和稳定性；而不合理的分配策略则可能导致负载不均、资源浪费或过度远程访问，从而显著影响整体系统的性能表现。M-JIAJIA 支持多种共享内存分配算法：
-\begin{itemize}
-    \item 轮询分配（Round-Robin Allocation）：该分配方案每次选择一个主机分配所有空间，并根据顺序和调用次数依次选定节点。例如，首次调用 jia\_alloc 时选择节点 1，第二次调用选择节点 2，依此类推，直至最后一个节点后循环回到节点 1。
-    \item 循环块分配（Cyclic Block Allocation）：jia\_alloc2 接受两个参数 totalsize 和 blocksize，该分配方案将 totalsize 大小的空间按 blocksize 大小拆分，并在所有节点间轮询分配。例如，首先将第一块分配至节点 1，第二块至节点 2，依此类推，直至最后一个节点后循环回到节点 1，持续分配直至 totalsize 全部分配完毕。jia\_alloc3 也归属于这类分配，区别是可以利用第三个参数指定起始主机。
-    \item 集中式分配（Centralized Allocation）：jia\_alloc2p 接受两个参数 totalsize 和 starthost，该分配方案将在 starthost 主机上分配整个 totalsize 大小的共享内存。
-    \item 阶段式块分配（Phased Block Allocation）：该分配方案将每次循环分配视为一个阶段，在每个阶段中使用相同的块大小分配给所有主机；在下一阶段，选择块数组中的下一个块大小进行分配，当块数组遍历完毕后，循环回到数组的起始位置继续分配。jia\_alloc4 属于此类型。
-    \item 随机集中式分配（Random Centralized Allocation）：该分配方案在每次调用时随机选择一台主机，并在该主机上分配所有空间。jia\_alloc\_random 属于此类型。
-    \item 预定义块序列循环分配（Cyclic Allocation with Predefined Block Sequence）：这种分配方式在节点间循环分配，但每次在节点 i 上分配的空间大小由 array[i] 决定，因此块数组的大小需与系统总进程数相同。jia\_alloc\_array 属于此类型。
-\end{itemize}
-\subsection{同步操作}
-M-JIAJIA 提供两种同步原语 jia\_lock 和 jia\_barrier 和一种等待原语 jia\_wait。同步原语底层依赖同步变量和相应的管理器，在调用时会涉及对临界区内共享页修改的传播以保证内存一致性，而等待原语依赖主节点上的计数器，仅保证所有进程运行到程序的同一位置。
+    jia\_exit 用于收集所有远程节点的统计信息，并在释放系统资源后退出。
+    \subsection{内存操作}
+    内存操作的核心在于共享内存的分配，其中内存分配算法的选择将直接影响系统的负载均衡、资源利用率和通信开销。具体而言，内存分配算法决定了共享内存如何在不同节点间划分，从而影响任务和数据的分配，进而影响并行计算的效率与性能。合理的内存分配算法能够减少节点间的通信延迟，提升系统的可扩展性和稳定性；而不合理的分配策略则可能导致负载不均、资源浪费或过度远程访问，从而显著影响整体系统的性能表现。M-JIAJIA 支持多种共享内存分配算法：
+    \begin{itemize}
+        \item 轮询分配（Round-Robin Allocation）：该分配方案每次选择一个主机分配所有空间，并根据顺序和调用次数依次选定节点。例如，首次调用 jia\_alloc 时选择节点 1，第二次调用选择节点 2，依此类推，直至最后一个节点后循环回到节点 1。
+        \item 循环块分配（Cyclic Block Allocation）：jia\_alloc2 接受两个参数 totalsize 和 blocksize，该分配方案将 totalsize 大小的空间按 blocksize 大小拆分，并在所有节点间轮询分配。例如，首先将第一块分配至节点 1，第二块至节点 2，依此类推，直至最后一个节点后循环回到节点 1，持续分配直至 totalsize 全部分配完毕。jia\_alloc3 也归属于这类分配，区别是可以利用第三个参数指定起始主机。
+        \item 集中式分配（Centralized Allocation）：jia\_alloc2p 接受两个参数 totalsize 和 starthost，该分配方案将在 starthost 主机上分配整个 totalsize 大小的共享内存。
+        \item 阶段式块分配（Phased Block Allocation）：该分配方案将每次循环分配视为一个阶段，在每个阶段中使用相同的块大小分配给所有主机；在下一阶段，选择块数组中的下一个块大小进行分配，当块数组遍历完毕后，循环回到数组的起始位置继续分配。jia\_alloc4 属于此类型。
+        \item 随机集中式分配（Random Centralized Allocation）：该分配方案在每次调用时随机选择一台主机，并在该主机上分配所有空间。jia\_alloc\_random 属于此类型。
+        \item 预定义块序列循环分配（Cyclic Allocation with Predefined Block Sequence）：这种分配方式在节点间循环分配，但每次在节点 i 上分配的空间大小由 array[i] 决定，因此块数组的大小需与系统总进程数相同。jia\_alloc\_array 属于此类型。
+    \end{itemize}
+    \subsection{同步操作}
+    M-JIAJIA 提供两种同步原语 jia\_lock 和 jia\_barrier 和一种等待原语 jia\_wait。同步原语底层依赖同步变量和相应的管理器，在调用时会涉及对临界区内共享页修改的传播以保证内存一致性，而等待原语依赖主节点上的计数器，仅保证所有进程运行到程序的同一位置。
 
-\subsection{消息传递接口}
-消息传递接口用于分布式编程中节点之间的显式通信，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv 。jia\_send 用于向特定主机发送指定数据，而 jia\_recv 负责接收来自其他主机的消息。由于系统采用双通信栈支持，jia\_send 在通信层可以使用 UDP 或 IPoIB 或 RDMA 通信，在章节~\ref{chap:experiments} 将包含不同通信栈下 jia\_send 和 jia\_recv 的测试，以及与典型MPI实现 openmpi 中 MPI\_send 和 MPI\_recv 的测试比较。
+    \subsection{消息传递接口}
+    消息传递接口用于分布式编程中节点之间的显式通信，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv 。jia\_send 用于向特定主机发送指定数据，而 jia\_recv 负责接收来自其他主机的消息。由于系统采用双通信栈支持，jia\_send 在通信层可以使用 UDP 或 IPoIB 或 RDMA 通信，在章节~\ref{chap:experiments} 将包含不同通信栈下 jia\_send 和 jia\_recv 的测试，以及与典型MPI实现 openmpi 中 MPI\_send 和 MPI\_recv 的测试比较。
 
-\subsection{RMA 接口}
-M-JIAJIA 支持两个远程内存访问接口： jia\_get 和 jia\_put。jia\_get 和 jia\_put 用于私有内存和共享内存的数据传输，jia\_get 用于从共享内存中拷贝数据至私有内存，而 jia\_put 用将私有内存的数据存入共享内存。
-\subsection{模板与使用说明}
-接口层的介绍将以一个 M-JIAJIA 的模板结束，如列表~\ref{lst:jia-template}所示。利用 M-JIAJIA 接口编程存在两个基本注意点：
-\begin{itemize}
-    \item 所有程序均需要以 jia\_init 和 jia\_exit 完成系统的初始化和退出。
-    \item 除消息传递接口和 RMA 接口外，所有其他接口必须全局执行，即不可依赖条件语句进行共享内存分配或同步操作。
-\end{itemize}
-\begin{lstlisting}[style=CStyle, caption={M-JIAJIA 应用模板}, label={lst:jia-template}]
+    \subsection{RMA 接口}
+    M-JIAJIA 支持两个远程内存访问接口： jia\_get 和 jia\_put。jia\_get 和 jia\_put 用于私有内存和共享内存的数据传输，jia\_get 用于从共享内存中拷贝数据至私有内存，而 jia\_put 用将私有内存的数据存入共享内存。
+    \subsection{模板与使用说明}
+    接口层的介绍将以一个 M-JIAJIA 的模板结束，如列表~\ref{lst:jia-template}所示。利用 M-JIAJIA 接口编程存在两个基本注意点：
+    \begin{itemize}
+        \item 所有程序均需要以 jia\_init 和 jia\_exit 完成系统的初始化和退出。
+        \item 除消息传递接口和 RMA 接口外，所有其他接口必须全局执行，即不可依赖条件语句进行共享内存分配或同步操作。
+    \end{itemize}
+    \begin{lstlisting}[style=CStyle, caption={M-JIAJIA 应用模板}, label={lst:jia-template}]
 #include <jia.h>
 int main(int argc, char **argv) {
     jia_init(argc, argv);   // 系统初始化
@@ -102,282 +102,282 @@ int main(int argc, char **argv) {
     return 0;
 }
 \end{lstlisting}
-\section{核心模块设计}
-核心模块层主要由系统的核心处理逻辑组成，负责管理关键数据结构。其中，核心处理逻辑包括初始化模块、内存管理模块、缓存管理模块、锁管理模块、UDP 通信管理模块、RDMA 通信管理模块以及统计模块。以下将介绍各模块的具体作用。
-\begin{itemize}
-    \item 初始化模块：该模块负责 M-JIAJIA 系统的初始化，是 jia\_init 的核心实现，详见~\ref{sec:init}。
-    \item 系统配置模块：该模块负责从 .jiahosts 文件获取可用节点信息，并从 .jiaconf 配置文件中读取系统配置选项。当前支持的配置包括通信栈选择、消息池和队列大小、优化开关及相关参数。此外，该模块还基于本地 IP 信息生成进程唯一标识。
-    \begin{figure}[!htbp]
-        \centering
-        \includegraphics[width=0.85\textwidth]{Img/system_setting.png}
-        \bicaption{\enspace 系统配置模块}{\enspace System setting module}
-        \label{fig:system-setting-module}
-    \end{figure}
-    
-    \item 内存管理模块：该模块继承自 JIAJIA 的内存管理器，主要负责管理三个核心数据结构：宿主页表（home）、全局页表（page）和缓存页表（cache）。宿主页表维护当前主机上分配的共享内存页状态，如其他主机是否存有有效副本；全局页表记录每个页的宿主节点、对应的缓存索引等信息；缓存页表条目为（本地页状态，缓存页地址，备份地址，脏位）四元组。
-    \item 锁管理模块：该模块继承自 JIAJIA 的锁管理器，主要负责同步变量（锁与屏障）的管理。同步变量作为共享变量，由锁管理器统一调度。在初始化阶段，锁被循环分配至各节点，并为每把锁指定对应的宿主节点。屏障作为一种特殊的锁，在系统中仅存在一个全局实例。
-    \item UDP 通信管理模块：该模块承担 JIAJIA 中通信管理器的职能。不同之处在于，M-JIAJIA 采用统一的通信管理器，负责记录发送、接收和确认过程中使用的端口和套接字描述符。
-    \item RDMA 通信管理模块：该模块主要包括 RDMA 通信管理器，负责记录网卡参数、分配的网卡资源以及连接相关的参数和资源等信息。
-    \item 统计模块：该模块负责 M-JIAJIA 系统在程序运行时的执行统计，主要包括消息统计和时间开销分析两部分。程序调用 jia\_exit 时，统计信息将汇总至主节点并输出。
-\end{itemize}
-\section{通信层设计}
-M-JIAJIA 分层设计分离了通信任务和系统任务，系统任务只需与消息队列交互即可完成消息的发送与接收，而通信层负责具体的消息传输。通信层支持两种独立的通信协议栈：传统的 UDP 通信栈和 RDMA 通信栈，用户可以通过配置文件 .jiaconf 自定义选择使用的通信栈，系统在初始化过程中将根据配置参数初始化相应的通信栈。
-
-\subsection{UDP 通信栈设计}
-UDP 通信无需建立连接，其核心流程包含三个基本操作：套接字创建、端口绑定及数据收发。M-JIAJIA 系统在运行时需应对高并发通信场景，即任一时刻可能接收来自多个节点的请求，为了避免数据接收阻塞，将为每台远程节点分配独立的接收套接字描述符。然而，管理多个套接字描述符引入了端口占用与I/O多路复用设计挑战。
-
-针对端口占用问题，M-JIAJIA 采用了一种不同于 JIAJIA  的设计方案，将端口占用复杂度从 $O(N^2)$ 降到 $O(N)$。在 I/O 处理方面，M-JIAJIA 通过 epoll 事件轮询机制替代了传统的 SIGIO信号与select组合的多路复用，提高了I/O 多路复用的效率；此外，为进一步加速通信任务，M-JIAJIA 采用多线程架构拆分通信流水线，实现发送、接收和处理的并行加速。针对 UDP协议的不可靠传输特性，M-JIAJIA在应用层引入序号+确认机制，并结合超时重传策略，确保通信的可靠性。
-
-下面将分别介绍 M-JIAJIA UDP 通信栈的端口占用算法、I/O多路复用机制、多线程架构设计以及可靠通信实现。
-\begin{enumerate}[label=\arabic*.]
-    \item \textbf{端口占用算法设计}
-    
-    M-JIAJIA 使用 UDP 协议完成一次通信的过程分为两个阶段：消息的发送与接收，以及确认消息（Ack）的回传与接收。根据端口的功能，可以将其划分为发送消息端口、接收消息端口、发送 Ack 端口和接收 Ack 端口。不同于 JIAJIA 中为每条UDP通道（每两台之间通信）设置随机的发送消息端口和发送 Ack 端口，M-JIAJIA采用统一的发送消息端口和接收 Ack 端口，为每个远端节点设置独立的接收消息端口，同时复用接收消息端口为发送 Ack 端口。具体设计如下：在规模为 N 的集群中，每个节点仅使用全局 start\_port 端口基础上[0, N]范围内的端口。例如，节点 i 使用 [0, i) 和 (i, N) 范围内的端口接收来自相应节点的消息并回复 Ack，剩余的端口 i 和 N，M-JIAJIA 将使用 i 作为发送端口，N 作为接收 Ack 端口。
-
-    如图~\ref{fig:mjiajia-port-design}所示，图中红线是消息通路，蓝线是Ack通路，采用上述端口设计的host0 和 host2 之间一次通信将执行如下流程：
-        \begin{itemize}
-            \item host0 通过 snd\_port 发送消息至 host2 的 port 0 接口端口;
-            \item host2 利用 port 0 作为发送 Ack 端口发送 Ack 至 host0 的 ack\_port。
-        \end{itemize}
-
-        \begin{figure}[H]
-            \centering
-            \includegraphics[width=1.0\textwidth]{Img/comm_port.drawio.pdf}
-            \bicaption{端口算法设计示例图}{Example diagram of the port algorithm design}
-            \label{fig:mjiajia-port-design}
-        \end{figure}
-
-    \item \textbf{I/O多路复用设计}
-    
-    I/O多路复用技术用于同时监视多个文件描述符，以判断哪些文件描述符能够执行I/O操作。在 Linux 系统中，常用的多路复用接口有 select() 、poll() 和 epoll 接口。
-
-    select() 作为最早期的 I/O 多路复用实现，通过用户态与内核态之间文件描述符集合传递实现多路监听。其核心流程如下：
+    \section{核心模块设计}
+    核心模块层主要由系统的核心处理逻辑组成，负责管理关键数据结构。其中，核心处理逻辑包括初始化模块、内存管理模块、缓存管理模块、锁管理模块、UDP 通信管理模块、RDMA 通信管理模块以及统计模块。以下将介绍各模块的具体作用。
     \begin{itemize}
-        \item 描述符集合初始化：用户需要定义三个独立的位图结构（fd\_set）：readfds、wrtiefds 和 exceptfds，分别用于标记需要监听的读、写及异常文件描述符的集合。每个 fd\_set 默认仅支持 1024 位，即最多支持 1024 个文件描述符。
-        \item  内核处理与状态检查：调用 select() 时，用户态的 fd\_set 集合将会被拷贝至内核，内核随后线性遍历所有描述符，检查是否就绪。
-        \item 结果返回与集合更新：内核根据遍历结果修改 fd\_set 位图，仅保留就绪的描述符返回至用户态，用户进程需再次遍历位图，以确定哪些描述符就绪。
+        \item 初始化模块：该模块负责 M-JIAJIA 系统的初始化，是 jia\_init 的核心实现，详见~\ref{sec:init}。
+        \item 系统配置模块：该模块负责从 .jiahosts 文件获取可用节点信息，并从 .jiaconf 配置文件中读取系统配置选项。当前支持的配置包括通信栈选择、消息池和队列大小、优化开关及相关参数。此外，该模块还基于本地 IP 信息生成进程唯一标识。
+              \begin{figure}[!htbp]
+                  \centering
+                  \includegraphics[width=0.85\textwidth]{Img/system_setting.png}
+                  \bicaption{\enspace 系统配置模块}{\enspace System setting module}
+                  \label{fig:system-setting-module}
+              \end{figure}
+
+        \item 内存管理模块：该模块继承自 JIAJIA 的内存管理器，主要负责管理三个核心数据结构：宿主页表（home）、全局页表（page）和缓存页表（cache）。宿主页表维护当前主机上分配的共享内存页状态，如其他主机是否存有有效副本；全局页表记录每个页的宿主节点、对应的缓存索引等信息；缓存页表条目为（本地页状态，缓存页地址，备份地址，脏位）四元组。
+        \item 锁管理模块：该模块继承自 JIAJIA 的锁管理器，主要负责同步变量（锁与屏障）的管理。同步变量作为共享变量，由锁管理器统一调度。在初始化阶段，锁被循环分配至各节点，并为每把锁指定对应的宿主节点。屏障作为一种特殊的锁，在系统中仅存在一个全局实例。
+        \item UDP 通信管理模块：该模块承担 JIAJIA 中通信管理器的职能。不同之处在于，M-JIAJIA 采用统一的通信管理器，负责记录发送、接收和确认过程中使用的端口和套接字描述符。
+        \item RDMA 通信管理模块：该模块主要包括 RDMA 通信管理器，负责记录网卡参数、分配的网卡资源以及连接相关的参数和资源等信息。
+        \item 统计模块：该模块负责 M-JIAJIA 系统在程序运行时的执行统计，主要包括消息统计和时间开销分析两部分。程序调用 jia\_exit 时，统计信息将汇总至主节点并输出。
     \end{itemize}
-    
-    从上述流程可以看出 select() 存在这些缺陷：一是存在用户空间和内核空间的数据拷贝开销；二是轮询遍历机制低效，算法复杂度在 O(n) 级别；三是可扩展性受到 FD\_SETSIZE 硬性限制；四是编程复杂性较高，每次调用前必须重新初始化描述符集合；这些缺陷使得 select() 在高并发场景下表现不佳，而仅适用于低负载或兼容性优先的遗留系统（见图~\ref{fig:io-multiplex-api}）。
+    \section{通信层设计}
+    M-JIAJIA 分层设计分离了通信任务和系统任务，系统任务只需与消息队列交互即可完成消息的发送与接收，而通信层负责具体的消息传输。通信层支持两种独立的通信协议栈：传统的 UDP 通信栈和 RDMA 通信栈，用户可以通过配置文件 .jiaconf 自定义选择使用的通信栈，系统在初始化过程中将根据配置参数初始化相应的通信栈。
 
-    poll() 是为了解决 select() 在可扩展性方面的局限性而提出的改进版本。它允许用户构建一个可自定义大小的 pollfd 结构体数组，该结构体包含文件描述符（fd）、事件集合（events）和 返回事件集合（revents） 三个字段，其中 fd 指定要监视的文件描述符，events 指定感兴趣的事件类型，revents 将被内核修改用于指示该文件描述符上就绪的事件。这种设计绑定文件描述符与感兴趣的事件，而无需为每种事件（如可读、可写和异常）单独构造描述符集。其核心执行流程如下：
-    \begin{itemize}
-        \item 创建并初始化 pollfd 数组。用户创建指定大小的 pollfd 数组，并根据需要初始化要监视的文件描述符和等待就绪的事件。
-        \item 调用 poll() 系统调用。poll() 将和 select() 一样，在被调用时将包含文件描述符和事件的数据结构传递给内核，并指定超时时间，然后阻塞直到一个或多个文件描述符就绪或超时。
-        \item 内核轮询与事件检查。内核将遍历 pollfd 数组，检查文件描述符相应的事件是否就绪，就绪事件类型将被记录到结构体的 revents 字段，然后返回结构体数组至用户态。
-        \item 用户态处理就绪事件。在 poll() 返回后，进程在用户态需再次遍历 pollfd 数组以确定哪些文件描述符就绪。
-    \end{itemize}
-    
-    相较于select()，poll() 通过自定义数组结构消除了可监视的文件描述符数量限制，但在处理大量描述符时，会导致用户态与内核态之间复制开销显著增大。此外，poll() 依旧采用低效的轮询遍历机制，高时间复杂度使其同样不适用于高并发场景。
-    
-    epoll 是 Linux 系统为克服 select() 和 poll() 缺陷而引入的IO多路复用接口，最早在 Linux 2.6 版本中推出。它提供三个核心函数：epoll\_create()、epoll\_ctl() 和 epoll\_wait()。 其中，epoll\_create() 负责指示内核创建一个epoll实例（epoll instance），该实例采用红黑树（red-black tree）管理监听的文件描述符，并使用双向链表来维护就绪事件。epoll\_ctl() 用于在红黑树上添加、修改或删除监听项（epitem）并注册回调函数，内核会通过回调函数在事件就绪时将监听项添加至就绪链表中。epoll\_wait() 负责扫描就绪链表，获取就绪事件并拷贝至用户空间。用户程序在获取就绪事件数组后，通过遍历就绪文件描述符并识别就绪事件从而进行相应的IO处理。
+    \subsection{UDP 通信栈设计}
+    UDP 通信无需建立连接，其核心流程包含三个基本操作：套接字创建、端口绑定及数据收发。M-JIAJIA 系统在运行时需应对高并发通信场景，即任一时刻可能接收来自多个节点的请求，为了避免数据接收阻塞，将为每台远程节点分配独立的接收套接字描述符。然而，管理多个套接字描述符引入了端口占用与I/O多路复用设计挑战。
 
-    相较于 select() 和 poll()，epoll 接口呈现出以下优势：
-    \begin{itemize}
-        \item 仅在调用 epoll\_wait() 时拷贝就绪数组至用户空间，降低了用户空间与内核空间的拷贝开销。
-        \item 内核通过回调机制将就绪的 epitem 直接添加至就绪链表，而无需遍历整个文件描述符集合，提高了事件检测效率。
-        \item 用户在处理事件时只需遍历就绪文件描述符集合而无需遍历整个文件描述符集合，将时间复杂度从 O(n) 降低至 O(r) （其中 r 为就绪事件的数量）。
-        \item 支持水平触发（Level-triggered）和边缘触发（Edge-triggered）两种模式：水平触发在文件描述符处于就绪状态持续通知，编程模式类似于 select() 和 poll() ；而边缘触发仅在文件描述符状态发生变化时触发一次，减少了无效事件通知和资源消耗，更为适合高并发、低延迟、高吞吐的场景。
-    \end{itemize}
-    
-    图~\ref{fig:io-multiplex-api} 展示了使用 fdmonbench~\citep{githubStefanhafdmonbench} 测试 select()、poll() 和 epoll 这三种 I/O 多路复用接口在文件描述符监视任务中的性能表现。fdmonbench 是一个专用于文件描述符监控的基准测试工具，其测试方法是在多个监听文件描述符的线程间发送消息。当某个文件描述符变为可读时，消息被读取并立即发送回去作为回复；收到回复后，下一条消息会被随机发送到另一个文件描述符。 其中，图~\ref{fig:io-multiplex-perf} 显示了消息速率（每秒往返消息次数）随文件描述符数量增长的变化趋势，而图~\ref{fig:io-multiplex-cpu} 则展示了CPU 效率（单位 CPU时间内往返消息次数）在不同文件描述符规模下的变化。可以观察到，epoll 在消息速率和 CPU 利用率方面均表现出良好的可扩展性，而 select() 和 poll() 的消息速率在文件描述符超过 32 之后开始线性下降，同时 CPU 利用率也随着文件描述符数量的增加而逐渐降低。
-    \begin{figure}[!htbp]
-    	\centering
-    	\begin{subfigure}[b]{0.45\textwidth}
-    		\includegraphics[width=\textwidth]{Img/io-multiplex-perf.png}
-    		\caption{消息传输速率}
-    		\label{fig:io-multiplex-perf}
-    	\end{subfigure}
-    	~ % 添加期望的间隔
-    	\begin{subfigure}[b]{0.45\textwidth}
-    		\includegraphics[width=\textwidth]{Img/io-multiplex-cpu.png}
-    		\caption{CPU利用率}
-    		\label{fig:io-multiplex-cpu}
-    	\end{subfigure}
-        \bicaption{\enspace I/O 多路复用接口比较}{\enspace I/O multiplexing interface comparison}
-        \caption*{测试机器属性：Linux 6.8.0, 11GB RAM, i7-8550U}
-        \label{fig:io-multiplex-api}
-    \end{figure}
+    针对端口占用问题，M-JIAJIA 采用了一种不同于 JIAJIA  的设计方案，将端口占用复杂度从 $O(N^2)$ 降到 $O(N)$。在 I/O 处理方面，M-JIAJIA 通过 epoll 事件轮询机制替代了传统的 SIGIO信号与select组合的多路复用，提高了I/O 多路复用的效率；此外，为进一步加速通信任务，M-JIAJIA 采用多线程架构拆分通信流水线，实现发送、接收和处理的并行加速。针对 UDP协议的不可靠传输特性，M-JIAJIA在应用层引入序号+确认机制，并结合超时重传策略，确保通信的可靠性。
 
-    因此 M-JIAJIA 在IO多路复用设计上选择使用 epoll 接口，并采用边缘触发模式，以适应软件 DSM 系统大规模并发通信场景，尽管这在一定程度上会影响可移植性，但其优势仍使其成为更优的选择。具体使用流程如下（见算法~\ref{alg:listen-thread}）：
-    \begin{itemize}
-        \item 调用 epoll\_create() 创建 epoll 实例。
-        \item 创建并初始化 epoll\_event 结构，该结构将关联接收文件描述符与监听模式为可读事件（EPOLLIN）与边缘触发（EPOLLET）；然后调用 epoll\_ctl 将文件描述符关联到 epoll 实例。
-        \item 循环调用 epoll\_wait() 得到就绪事件，遍历就绪事件读取消息。
-    \end{itemize}
-    \item \textbf{多线程架构设计}
+    下面将分别介绍 M-JIAJIA UDP 通信栈的端口占用算法、I/O多路复用机制、多线程架构设计以及可靠通信实现。
+    \begin{enumerate}[label=\arabic*.]
+        \item \textbf{端口占用算法设计}
 
-    select() 和 poll() 是同步系统调用，仅在事件就绪、超时或设置为非阻塞时中断返回。为了在运行进程核心逻辑的同时兼顾通信，要么采用多线程设计、要么采用信号驱动I/O（回调机制），JIAJIA 采用了后者。不过这种方案存在以下不足：
-    \begin{itemize}
-        \item SIGIO信号可能在程序执行的任何时刻被触发，需要确保信号处理程序的逻辑是可重入且线程安全的。这涉及到在临界区域处理和返回确认消息时屏蔽信号。
-        \item SIGIO信号是非排队信号，多个 I/O 事件触发信号而信号在处理中被阻塞，后续信号可能丢失。
-        \item 每次信号触发都需要从内核态切换到用户态执行处理函数，频繁的信号涉及大量上下文切换开销。
-    \end{itemize}
-    
-    为了克服上述缺陷，M-JIAJIA 采用图~\ref{fig:mjiajia-multithread}所示的多线程架构设计。该架构将通信任务划分为发送、接收和处理三个子任务，并为每个子任务分配独立线程执行，以提高并发效率。
-    \begin{figure}[H]
-        \centering
-        \includegraphics[width=1.0\textwidth]{Img/Multithread-arch.png}
-        \bicaption{\enspace 多线程架构设计}{\enspace Multithread architecture design}
-        \label{fig:mjiajia-multithread}
-    \end{figure}
+              M-JIAJIA 使用 UDP 协议完成一次通信的过程分为两个阶段：消息的发送与接收，以及确认消息（Ack）的回传与接收。根据端口的功能，可以将其划分为发送消息端口、接收消息端口、发送 Ack 端口和接收 Ack 端口。不同于 JIAJIA 中为每条UDP通道（每两台之间通信）设置随机的发送消息端口和发送 Ack 端口，M-JIAJIA采用统一的发送消息端口和接收 Ack 端口，为每个远端节点设置独立的接收消息端口，同时复用接收消息端口为发送 Ack 端口。具体设计如下：在规模为 N 的集群中，每个节点仅使用全局 start\_port 端口基础上[0, N]范围内的端口。例如，节点 i 使用 [0, i) 和 (i, N) 范围内的端口接收来自相应节点的消息并回复 Ack，剩余的端口 i 和 N，M-JIAJIA 将使用 i 作为发送端口，N 作为接收 Ack 端口。
 
-    架构的数据通道依赖于消息池和循环消息队列两个关键数据结构，核心逻辑由发送线程（client）、侦听线程（listener）和服务线程（server）实现。
+              如图~\ref{fig:mjiajia-port-design}所示，图中红线是消息通路，蓝线是Ack通路，采用上述端口设计的host0 和 host2 之间一次通信将执行如下流程：
+              \begin{itemize}
+                  \item host0 通过 snd\_port 发送消息至 host2 的 port 0 接口端口;
+                  \item host2 利用 port 0 作为发送 Ack 端口发送 Ack 至 host0 的 ack\_port。
+              \end{itemize}
 
-    \textbf{消息池}：消息池中包含大量预先分配的消息对象，发送消息的线程可以直接从消息池中拿到空闲对象使用，从而避免频繁分配空间的开销。这种设计采用以空间换时间的策略，在高吞吐场景下可以大大提高消息组装的效率。M-JIAJIA 采用两个消息池：diffs 消息池和通用消息池。其中，diffs 消息池专用于发送 diffs 消息，系统为每个远端节点预分配一个消息对象，在同步过程中，所有针对同一宿主的远端页产生的 diffs 将被整合至同一消息中，并统一发送回其宿主。通用消息池则可用于组装所有其他类型的消息。
+              \begin{figure}[H]
+                  \centering
+                  \includegraphics[width=1.0\textwidth]{Img/comm_port.drawio.pdf}
+                  \bicaption{端口算法设计示例图}{Example diagram of the port algorithm design}
+                  \label{fig:mjiajia-port-design}
+              \end{figure}
 
-    \textbf{循环消息队列}：循环消息队列是 M-JIAJIA 核心模块层和通信层之间的通信渠道。UDP 通信栈包含输入队列（inqueue）和输出队列（outqueue）两个循环消息队列，分别用于存放接收到的消息和待发送的消息。队列使用队尾（tail）指示下一个可用消息空间，队头（head）指示当前待处理的消息，并利用信号量free\_count 判断队列是否满，busy\_count 判断队列是否空。
+        \item \textbf{I/O多路复用设计}
 
-    \textbf{发送线程}： 发送线程主要负责两个任务，一是检测输出队列是否有待发送的消息。如果有，便从队列中取出消息并发送；如果没有，则进入阻塞状态直到有新消息需要发送。二是负责可靠消息传输。通过侦听 Ack 消息描述符，接收 Ack 消息以判断消息是否发送成功，若 Ack不匹配将导致消息的重传。发送线程的伪代码如算法~\ref{alg:client-thread} 所示。
+              I/O多路复用技术用于同时监视多个文件描述符，以判断哪些文件描述符能够执行I/O操作。在 Linux 系统中，常用的多路复用接口有 select() 、poll() 和 epoll 接口。
 
-    \begin{algorithm}[H]
-        \caption{client thread algorithm}\label{alg:client-thread}
-        \begin{algorithmic}[1] % [1] 使得每行都有行号
-            \Procedure{ClientThread}{}
-                \State initialize $epollfd \gets$ \Call{epoll\_create}{$1$}
-                \State add $epollfd \gets ack\_fds$
-                \While{$true$}
-                    \State \Call{sem\_wait}{$outqueue.busy\_count$}
-                    \State $msg\_ptr \gets$ \Call{dequeue}{$outqueue$}
-                    \For{$retries\_num \gets 0$ to RETRYNUM}
-                        \If{$!$ \Call{outsend}{$msg\_ptr$}}
-                            \State $break$
-                        \EndIf
-                    \EndFor
-                    \State $snd\_seq[msg\_ptr$->$topid]$++
-                    \State \Call{sem\_post}{$outqueue.free\_count$}
-                \EndWhile
-                \State \textbf{return}
-             \EndProcedure
-    
-            \Function{outsend}{$msg$}
-                \If{$msg$->$topid$ = $msg$->$frompid$}
-                    \State \textbf{return} \Call{enqueue}{$inqueue,msg$} 
-                \Else
-                    \State initialize $to\_addr \gets \{msg$->$topid.ip,snd\_port \}$
-                    \State \Call{sendto}{$snd\_fds,to\_addr,msg$}
-                \EndIf
-    
-                \While{$true$}
-                    \State $nfds \gets$ \Call{epoll\_wait}{$epollfd$} 
-                    \State \Call{recvfrom}{$ackfds,ack$}
-                    \State \textbf{assert}~$\{ack.sid = msg$->$topid\}\;$
-                    \State \textbf{assert}~$\{ack.seqno = msg$->$seqno+1\}\;$
-                    \State $break$
-                \EndWhile
-                \State \textbf{return} $0$
-            \EndFunction
-        \end{algorithmic}
-    \end{algorithm}
+              select() 作为最早期的 I/O 多路复用实现，通过用户态与内核态之间文件描述符集合传递实现多路监听。其核心流程如下：
+              \begin{itemize}
+                  \item 描述符集合初始化：用户需要定义三个独立的位图结构（fd\_set）：readfds、wrtiefds 和 exceptfds，分别用于标记需要监听的读、写及异常文件描述符的集合。每个 fd\_set 默认仅支持 1024 位，即最多支持 1024 个文件描述符。
+                  \item  内核处理与状态检查：调用 select() 时，用户态的 fd\_set 集合将会被拷贝至内核，内核随后线性遍历所有描述符，检查是否就绪。
+                  \item 结果返回与集合更新：内核根据遍历结果修改 fd\_set 位图，仅保留就绪的描述符返回至用户态，用户进程需再次遍历位图，以确定哪些描述符就绪。
+              \end{itemize}
 
-    \textbf{侦听线程}：侦听线程负责监视多个接收文件描述符，从就绪的文件描述符中接收消息，将其放入队列，并返回确认消息（Ack）。伪代码如算法~\ref{alg:listen-thread}所示。
-    \begin{algorithm}[H]
-        \caption{listen thread algorithm}\label{alg:listen-thread}
-        \begin{algorithmic}[1] % [1] 使得每行都有行号
-            \Procedure{ListenThread}{}
-                \State initialize $epollfd \gets$ \Call{epoll\_create}{$Maxhosts$}
-                \For{$i \gets 0$ to Maxhosts}
-                    \State add $epollfd \gets rcv\_fds[i]$
-                \EndFor
-                \While{$true$}
-                    \State $nfds \gets$ \Call{epoll\_wait}{$epollfd,events,Maxhosts$} 
-                    \For{$i \gets 0$ to $nfds$}
-                        \State $sockfd \gets events[i].data.fd$
-                        \State \Call{recv\_from}{$sockfd,msg$} 
-                        
-                        \State
-                        \State $ack \gets \{ msg.seqno+1, msg.topid \}$
-                        \State initialize $ack\_addr \gets \{ ack\_port,hosts[msg.frompid].ip \}$
-                        \State \Call{sendto}{$sock\_fd,ack\_addr,ack$}
-    
-                        \State
-                        \If{!\textbf{assert}~$\{msg.seqno = rcv\_seq[to\_id]\}\;$}
-                            \State $rcv\_seq[to\_id]$++
-                            \State \Call{enqueue}{$inqueue,msg$} 
-                        \EndIf
-                    \EndFor
-                \EndWhile
-                \State \textbf{return}
-             \EndProcedure
-        \end{algorithmic}
-    \end{algorithm}
+              从上述流程可以看出 select() 存在这些缺陷：一是存在用户空间和内核空间的数据拷贝开销；二是轮询遍历机制低效，算法复杂度在 O(n) 级别；三是可扩展性受到 FD\_SETSIZE 硬性限制；四是编程复杂性较高，每次调用前必须重新初始化描述符集合；这些缺陷使得 select() 在高并发场景下表现不佳，而仅适用于低负载或兼容性优先的遗留系统（见图~\ref{fig:io-multiplex-api}）。
 
-    \textbf{服务线程}：服务线程负责从输入队列中提取消息，并根据消息类型进行相应的服务。伪代码如算法~\ref{alg:server-thread} 所示。
-    \begin{algorithm}[H]
-        \caption{server thread algorithm}\label{alg:server-thread}
-        \begin{algorithmic}[1] % [1] 使得每行都有行号
-            \Procedure{ServerThread}{}
-                \State \Call{sem\_wait}{$inqueue.busy\_count$}
-    
-                \State $msg\_ptr \gets$ \Call{dequeue}{$inqueue$}
-                \State \Call{msg\_handle}{$msg\_ptr$}
-    
-                \State \Call{sem\_post}{$inqueue.free\_count$}
-                \State \textbf{return}
-             \EndProcedure
-        \end{algorithmic}
-    \end{algorithm}
+              poll() 是为了解决 select() 在可扩展性方面的局限性而提出的改进版本。它允许用户构建一个可自定义大小的 pollfd 结构体数组，该结构体包含文件描述符（fd）、事件集合（events）和 返回事件集合（revents） 三个字段，其中 fd 指定要监视的文件描述符，events 指定感兴趣的事件类型，revents 将被内核修改用于指示该文件描述符上就绪的事件。这种设计绑定文件描述符与感兴趣的事件，而无需为每种事件（如可读、可写和异常）单独构造描述符集。其核心执行流程如下：
+              \begin{itemize}
+                  \item 创建并初始化 pollfd 数组。用户创建指定大小的 pollfd 数组，并根据需要初始化要监视的文件描述符和等待就绪的事件。
+                  \item 调用 poll() 系统调用。poll() 将和 select() 一样，在被调用时将包含文件描述符和事件的数据结构传递给内核，并指定超时时间，然后阻塞直到一个或多个文件描述符就绪或超时。
+                  \item 内核轮询与事件检查。内核将遍历 pollfd 数组，检查文件描述符相应的事件是否就绪，就绪事件类型将被记录到结构体的 revents 字段，然后返回结构体数组至用户态。
+                  \item 用户态处理就绪事件。在 poll() 返回后，进程在用户态需再次遍历 pollfd 数组以确定哪些文件描述符就绪。
+              \end{itemize}
 
-    \item \textbf{可靠通信实现}
-    
-    针对 UDP 协议无连接、不可靠的传输特性，M-JIAJIA 系统在应用层采用消息序号、确认与超时重传机制实现可靠通信，见图~\ref{fig:mjiajia-reliable-comm}。
-    
-    \textbf{消息序号}：消息序号用于确保通信的有序性。通信管理器维护与每个远端节点通信的当前消息序号，发送线程从输出队列中获取消息后，将据此为消息分配序号。
+              相较于select()，poll() 通过自定义数组结构消除了可监视的文件描述符数量限制，但在处理大量描述符时，会导致用户态与内核态之间复制开销显著增大。此外，poll() 依旧采用低效的轮询遍历机制，高时间复杂度使其同样不适用于高并发场景。
 
-    \textbf{确认消息}：每当接收到一条消息，侦听线程会生成并返回相应的确认消息（Ack）。Ack由两部分组成：期望接收的下一个消息的序号以及本机标识。
+              epoll 是 Linux 系统为克服 select() 和 poll() 缺陷而引入的IO多路复用接口，最早在 Linux 2.6 版本中推出。它提供三个核心函数：epoll\_create()、epoll\_ctl() 和 epoll\_wait()。 其中，epoll\_create() 负责指示内核创建一个epoll实例（epoll instance），该实例采用红黑树（red-black tree）管理监听的文件描述符，并使用双向链表来维护就绪事件。epoll\_ctl() 用于在红黑树上添加、修改或删除监听项（epitem）并注册回调函数，内核会通过回调函数在事件就绪时将监听项添加至就绪链表中。epoll\_wait() 负责扫描就绪链表，获取就绪事件并拷贝至用户空间。用户程序在获取就绪事件数组后，通过遍历就绪文件描述符并识别就绪事件从而进行相应的IO处理。
 
-    \textbf{超时重传机制}：发送线程在发送消息后进入阻塞状态，等待 Ack 消息。如果超时未收到 Ack，则触发重传机制。然而，对于不匹配的 Ack，系统仅忽略处理，不触发重传。之所以采取这一策略，是为了避免以下情况：若消息实际未丢失但仍触发超时重传，则远端节点可能会接收到两条相同的消息，并分别回复两个 Ack。第一个 Ack 使得发送线程正常发送下一条消息，而第二个 Ack 若未被忽略，则可能再次触发重传，导致重复发送，影响通信效率。
+              相较于 select() 和 poll()，epoll 接口呈现出以下优势：
+              \begin{itemize}
+                  \item 仅在调用 epoll\_wait() 时拷贝就绪数组至用户空间，降低了用户空间与内核空间的拷贝开销。
+                  \item 内核通过回调机制将就绪的 epitem 直接添加至就绪链表，而无需遍历整个文件描述符集合，提高了事件检测效率。
+                  \item 用户在处理事件时只需遍历就绪文件描述符集合而无需遍历整个文件描述符集合，将时间复杂度从 O(n) 降低至 O(r) （其中 r 为就绪事件的数量）。
+                  \item 支持水平触发（Level-triggered）和边缘触发（Edge-triggered）两种模式：水平触发在文件描述符处于就绪状态持续通知，编程模式类似于 select() 和 poll() ；而边缘触发仅在文件描述符状态发生变化时触发一次，减少了无效事件通知和资源消耗，更为适合高并发、低延迟、高吞吐的场景。
+              \end{itemize}
 
-    \begin{figure}[H]
-        \centering
-        \includegraphics[width=0.65\textwidth]{Img/M-JIAJIA-reliable-comm.png}
-        \bicaption{\enspace M-JIAJIA 可靠通信实现}{\enspace M-JIAJIA Reliable Communication Implementation}
-        \label{fig:mjiajia-reliable-comm}
-    \end{figure}
-    
-\end{enumerate}
+              图~\ref{fig:io-multiplex-api} 展示了使用 fdmonbench~\citep{githubStefanhafdmonbench} 测试 select()、poll() 和 epoll 这三种 I/O 多路复用接口在文件描述符监视任务中的性能表现。fdmonbench 是一个专用于文件描述符监控的基准测试工具，其测试方法是在多个监听文件描述符的线程间发送消息。当某个文件描述符变为可读时，消息被读取并立即发送回去作为回复；收到回复后，下一条消息会被随机发送到另一个文件描述符。 其中，图~\ref{fig:io-multiplex-perf} 显示了消息速率（每秒往返消息次数）随文件描述符数量增长的变化趋势，而图~\ref{fig:io-multiplex-cpu} 则展示了CPU 效率（单位 CPU时间内往返消息次数）在不同文件描述符规模下的变化。可以观察到，epoll 在消息速率和 CPU 利用率方面均表现出良好的可扩展性，而 select() 和 poll() 的消息速率在文件描述符超过 32 之后开始线性下降，同时 CPU 利用率也随着文件描述符数量的增加而逐渐降低。
+              \begin{figure}[!htbp]
+                  \centering
+                  \begin{subfigure}[b]{0.45\textwidth}
+                      \includegraphics[width=\textwidth]{Img/io-multiplex-perf.png}
+                      \caption{消息传输速率}
+                      \label{fig:io-multiplex-perf}
+                  \end{subfigure}
+                  ~ % 添加期望的间隔
+                  \begin{subfigure}[b]{0.45\textwidth}
+                      \includegraphics[width=\textwidth]{Img/io-multiplex-cpu.png}
+                      \caption{CPU利用率}
+                      \label{fig:io-multiplex-cpu}
+                  \end{subfigure}
+                  \bicaption{\enspace I/O 多路复用接口比较}{\enspace I/O multiplexing interface comparison}
+                  \caption*{测试机器属性：Linux 6.8.0, 11GB RAM, i7-8550U}
+                  \label{fig:io-multiplex-api}
+              \end{figure}
 
-\subsection{RDMA通信模块}
-RDMA 通信模块包含 RDMA 通信栈的设计与实现，这部分将在第~\ref{chap:RJIAJIA}章节介绍。
+              因此 M-JIAJIA 在IO多路复用设计上选择使用 epoll 接口，并采用边缘触发模式，以适应软件 DSM 系统大规模并发通信场景，尽管这在一定程度上会影响可移植性，但其优势仍使其成为更优的选择。具体使用流程如下（见算法~\ref{alg:listen-thread}）：
+              \begin{itemize}
+                  \item 调用 epoll\_create() 创建 epoll 实例。
+                  \item 创建并初始化 epoll\_event 结构，该结构将关联接收文件描述符与监听模式为可读事件（EPOLLIN）与边缘触发（EPOLLET）；然后调用 epoll\_ctl 将文件描述符关联到 epoll 实例。
+                  \item 循环调用 epoll\_wait() 得到就绪事件，遍历就绪事件读取消息。
+              \end{itemize}
+        \item \textbf{多线程架构设计}
 
-\section{远程预取优化}
-对于软件 DSM 系统而言，远程内存访问开销是通信开销的重要组成部分，也是影响系统性能的关键因素之一。尽管 RDMA 高速网络显著降低了通信延迟，但远程内存访问的开销仍比本地内存访问高 1 至 2 个数量级~\citep{cai2018gam}。为此，远程预取技术被广泛研究和应用，以优化数据访问模式，减少远程访问延迟，从而提升系统整体性能。
+              select() 和 poll() 是同步系统调用，仅在事件就绪、超时或设置为非阻塞时中断返回。为了在运行进程核心逻辑的同时兼顾通信，要么采用多线程设计、要么采用信号驱动I/O（回调机制），JIAJIA 采用了后者。不过这种方案存在以下不足：
+              \begin{itemize}
+                  \item SIGIO信号可能在程序执行的任何时刻被触发，需要确保信号处理程序的逻辑是可重入且线程安全的。这涉及到在临界区域处理和返回确认消息时屏蔽信号。
+                  \item SIGIO信号是非排队信号，多个 I/O 事件触发信号而信号在处理中被阻塞，后续信号可能丢失。
+                  \item 每次信号触发都需要从内核态切换到用户态执行处理函数，频繁的信号涉及大量上下文切换开销。
+              \end{itemize}
 
-M-JIAJIA 的缓存策略是将远端页缓存至本机相同的虚拟地址空间，即共享地址为 addr 的远端页将在本机的 addr 虚拟地址上进行缓存。其远程预取优化设计基于这一发现，当首次访问并缓存远端页时，本地缓存将经历两个状态：一是缓存地址空间未映射；二是缓存地址空间已映射但缺乏相应的访问权限。这意味着当尝试修改远程页时，会先后触发两次段违例信号（SIGSEGV），并进行两次节点间消息传递。第一次是由于缓存地址未映射（SEGV\_MAPERR）导致，段违例信号处理程序将完成缓存地址映射，并向远端页的宿主节点发送读取页请求，取页完成后为缓存空间设置读权限；第二次是由于缺乏写权限（SEGV\_ACCERR）导致，将再次向远端页的宿主节点发送修改页请求，收到授权后为缓存页设置写权限。这种两次消息传递获取写权限的模式实际上可以通过预取来降低触发段违例的次数和减少节点间通信次数。
+              为了克服上述缺陷，M-JIAJIA 采用图~\ref{fig:mjiajia-multithread}所示的多线程架构设计。该架构将通信任务划分为发送、接收和处理三个子任务，并为每个子任务分配独立线程执行，以提高并发效率。
+              \begin{figure}[H]
+                  \centering
+                  \includegraphics[width=1.0\textwidth]{Img/Multithread-arch.png}
+                  \bicaption{\enspace 多线程架构设计}{\enspace Multithread architecture design}
+                  \label{fig:mjiajia-multithread}
+              \end{figure}
 
-在共享内存初始化过程中，两次消息传递获取写权限的模式会频繁出现。例如，当主节点对所有分配的共享内存进行初始化时，需要逐页缓存远端页并执行初始化操作。M-JIAJIA 的预取策略是在远程取页时，提前获取远端节点上分配的后续几页共享页，缓存至本地并赋予读权限。该策略能够将原本需要两次消息传递的写权限获取过程优化为仅需一次消息传递，从而提升访问效率。
+              架构的数据通道依赖于消息池和循环消息队列两个关键数据结构，核心逻辑由发送线程（client）、侦听线程（listener）和服务线程（server）实现。
 
-具体实现方案依赖于三个变量：预取开关（prefetch）、预取页数（prefetch\_pages）和最大检查页数（max\_checking\_pages）。预取的触发条件是：
-$$
-\left\{
-\begin{aligned}
-    &\texttt{prefetch = on}, \\
-    &\texttt{prefetch\_pages > 0}, \\
-    &\texttt{max\_checking\_pages > 0}
-\end{aligned}
-\right.
-$$
+              \textbf{消息池}：消息池中包含大量预先分配的消息对象，发送消息的线程可以直接从消息池中拿到空闲对象使用，从而避免频繁分配空间的开销。这种设计采用以空间换时间的策略，在高吞吐场景下可以大大提高消息组装的效率。M-JIAJIA 采用两个消息池：diffs 消息池和通用消息池。其中，diffs 消息池专用于发送 diffs 消息，系统为每个远端节点预分配一个消息对象，在同步过程中，所有针对同一宿主的远端页产生的 diffs 将被整合至同一消息中，并统一发送回其宿主。通用消息池则可用于组装所有其他类型的消息。
 
-在启用预取的情况下，远端节点在接收到读取页请求后，将最多向后检查 max\_checking\_pages 相邻页是否是共享页，并至多打包 prefetch\_pages 页一同返回。预取优化的效果取决于两次消息传递获取写权限的模式出现的概率以及共享内存的分配策略。若采用循环页分配算法，使相邻页分配至不同节点，预取优化的效果将受到限制。
+              \textbf{循环消息队列}：循环消息队列是 M-JIAJIA 核心模块层和通信层之间的通信渠道。UDP 通信栈包含输入队列（inqueue）和输出队列（outqueue）两个循环消息队列，分别用于存放接收到的消息和待发送的消息。队列使用队尾（tail）指示下一个可用消息空间，队头（head）指示当前待处理的消息，并利用信号量free\_count 判断队列是否满，busy\_count 判断队列是否空。
+
+              \textbf{发送线程}： 发送线程主要负责两个任务，一是检测输出队列是否有待发送的消息。如果有，便从队列中取出消息并发送；如果没有，则进入阻塞状态直到有新消息需要发送。二是负责可靠消息传输。通过侦听 Ack 消息描述符，接收 Ack 消息以判断消息是否发送成功，若 Ack不匹配将导致消息的重传。发送线程的伪代码如算法~\ref{alg:client-thread} 所示。
+
+              \begin{algorithm}[H]
+                  \caption{client thread algorithm}\label{alg:client-thread}
+                  \begin{algorithmic}[1] % [1] 使得每行都有行号
+                      \Procedure{ClientThread}{}
+                      \State initialize $epollfd \gets$ \Call{epoll\_create}{$1$}
+                      \State add $epollfd \gets ack\_fds$
+                      \While{$true$}
+                      \State \Call{sem\_wait}{$outqueue.busy\_count$}
+                      \State $msg\_ptr \gets$ \Call{dequeue}{$outqueue$}
+                      \For{$retries\_num \gets 0$ to RETRYNUM}
+                      \If{$!$ \Call{outsend}{$msg\_ptr$}}
+                      \State $break$
+                      \EndIf
+                      \EndFor
+                      \State $snd\_seq[msg\_ptr$->$topid]$++
+                      \State \Call{sem\_post}{$outqueue.free\_count$}
+                      \EndWhile
+                      \State \textbf{return}
+                      \EndProcedure
+
+                      \Function{outsend}{$msg$}
+                      \If{$msg$->$topid$ = $msg$->$frompid$}
+                      \State \textbf{return} \Call{enqueue}{$inqueue,msg$}
+                      \Else
+                      \State initialize $to\_addr \gets \{msg$->$topid.ip,snd\_port \}$
+                      \State \Call{sendto}{$snd\_fds,to\_addr,msg$}
+                      \EndIf
+
+                      \While{$true$}
+                      \State $nfds \gets$ \Call{epoll\_wait}{$epollfd$}
+                      \State \Call{recvfrom}{$ackfds,ack$}
+                      \State \textbf{assert}~$\{ack.sid = msg$->$topid\}\;$
+                      \State \textbf{assert}~$\{ack.seqno = msg$->$seqno+1\}\;$
+                      \State $break$
+                      \EndWhile
+                      \State \textbf{return} $0$
+                      \EndFunction
+                  \end{algorithmic}
+              \end{algorithm}
+
+              \textbf{侦听线程}：侦听线程负责监视多个接收文件描述符，从就绪的文件描述符中接收消息，将其放入队列，并返回确认消息（Ack）。伪代码如算法~\ref{alg:listen-thread}所示。
+              \begin{algorithm}[H]
+                  \caption{listen thread algorithm}\label{alg:listen-thread}
+                  \begin{algorithmic}[1] % [1] 使得每行都有行号
+                      \Procedure{ListenThread}{}
+                      \State initialize $epollfd \gets$ \Call{epoll\_create}{$Maxhosts$}
+                      \For{$i \gets 0$ to Maxhosts}
+                      \State add $epollfd \gets rcv\_fds[i]$
+                      \EndFor
+                      \While{$true$}
+                      \State $nfds \gets$ \Call{epoll\_wait}{$epollfd,events,Maxhosts$}
+                      \For{$i \gets 0$ to $nfds$}
+                      \State $sockfd \gets events[i].data.fd$
+                      \State \Call{recv\_from}{$sockfd,msg$}
+
+                      \State
+                      \State $ack \gets \{ msg.seqno+1, msg.topid \}$
+                      \State initialize $ack\_addr \gets \{ ack\_port,hosts[msg.frompid].ip \}$
+                      \State \Call{sendto}{$sock\_fd,ack\_addr,ack$}
+
+                      \State
+                      \If{!\textbf{assert}~$\{msg.seqno = rcv\_seq[to\_id]\}\;$}
+                      \State $rcv\_seq[to\_id]$++
+                      \State \Call{enqueue}{$inqueue,msg$}
+                      \EndIf
+                      \EndFor
+                      \EndWhile
+                      \State \textbf{return}
+                      \EndProcedure
+                  \end{algorithmic}
+              \end{algorithm}
+
+              \textbf{服务线程}：服务线程负责从输入队列中提取消息，并根据消息类型进行相应的服务。伪代码如算法~\ref{alg:server-thread} 所示。
+              \begin{algorithm}[H]
+                  \caption{server thread algorithm}\label{alg:server-thread}
+                  \begin{algorithmic}[1] % [1] 使得每行都有行号
+                      \Procedure{ServerThread}{}
+                      \State \Call{sem\_wait}{$inqueue.busy\_count$}
+
+                      \State $msg\_ptr \gets$ \Call{dequeue}{$inqueue$}
+                      \State \Call{msg\_handle}{$msg\_ptr$}
+
+                      \State \Call{sem\_post}{$inqueue.free\_count$}
+                      \State \textbf{return}
+                      \EndProcedure
+                  \end{algorithmic}
+              \end{algorithm}
+
+        \item \textbf{可靠通信实现}
+
+              针对 UDP 协议无连接、不可靠的传输特性，M-JIAJIA 系统在应用层采用消息序号、确认与超时重传机制实现可靠通信，见图~\ref{fig:mjiajia-reliable-comm}。
+
+              \textbf{消息序号}：消息序号用于确保通信的有序性。通信管理器维护与每个远端节点通信的当前消息序号，发送线程从输出队列中获取消息后，将据此为消息分配序号。
+
+              \textbf{确认消息}：每当接收到一条消息，侦听线程会生成并返回相应的确认消息（Ack）。Ack由两部分组成：期望接收的下一个消息的序号以及本机标识。
+
+              \textbf{超时重传机制}：发送线程在发送消息后进入阻塞状态，等待 Ack 消息。如果超时未收到 Ack，则触发重传机制。然而，对于不匹配的 Ack，系统仅忽略处理，不触发重传。之所以采取这一策略，是为了避免以下情况：若消息实际未丢失但仍触发超时重传，则远端节点可能会接收到两条相同的消息，并分别回复两个 Ack。第一个 Ack 使得发送线程正常发送下一条消息，而第二个 Ack 若未被忽略，则可能再次触发重传，导致重复发送，影响通信效率。
+
+              \begin{figure}[H]
+                  \centering
+                  \includegraphics[width=0.65\textwidth]{Img/M-JIAJIA-reliable-comm.png}
+                  \bicaption{\enspace M-JIAJIA 可靠通信实现}{\enspace M-JIAJIA Reliable Communication Implementation}
+                  \label{fig:mjiajia-reliable-comm}
+              \end{figure}
+
+    \end{enumerate}
+
+    \subsection{RDMA通信模块}
+    RDMA 通信模块包含 RDMA 通信栈的设计与实现，这部分将在第~\ref{chap:RJIAJIA}章节介绍。
+
+    \section{远程预取优化}
+    对于软件 DSM 系统而言，远程内存访问开销是通信开销的重要组成部分，也是影响系统性能的关键因素之一。尽管 RDMA 高速网络显著降低了通信延迟，但远程内存访问的开销仍比本地内存访问高 1 至 2 个数量级~\citep{cai2018gam}。为此，远程预取技术被广泛研究和应用，以优化数据访问模式，减少远程访问延迟，从而提升系统整体性能。
+
+    M-JIAJIA 的缓存策略是将远端页缓存至本机相同的虚拟地址空间，即共享地址为 addr 的远端页将在本机的 addr 虚拟地址上进行缓存。其远程预取优化设计基于这一发现，当首次访问并缓存远端页时，本地缓存将经历两个状态：一是缓存地址空间未映射；二是缓存地址空间已映射但缺乏相应的访问权限。这意味着当尝试修改远程页时，会先后触发两次段违例信号（SIGSEGV），并进行两次节点间消息传递。第一次是由于缓存地址未映射（SEGV\_MAPERR）导致，段违例信号处理程序将完成缓存地址映射，并向远端页的宿主节点发送读取页请求，取页完成后为缓存空间设置读权限；第二次是由于缺乏写权限（SEGV\_ACCERR）导致，将再次向远端页的宿主节点发送修改页请求，收到授权后为缓存页设置写权限。这种两次消息传递获取写权限的模式实际上可以通过预取来降低触发段违例的次数和减少节点间通信次数。
+
+    在共享内存初始化过程中，两次消息传递获取写权限的模式会频繁出现。例如，当主节点对所有分配的共享内存进行初始化时，需要逐页缓存远端页并执行初始化操作。M-JIAJIA 的预取策略是在远程取页时，提前获取远端节点上分配的后续几页共享页，缓存至本地并赋予读权限。该策略能够将原本需要两次消息传递的写权限获取过程优化为仅需一次消息传递，从而提升访问效率。
+
+    具体实现方案依赖于三个变量：预取开关（prefetch）、预取页数（prefetch\_pages）和最大检查页数（max\_checking\_pages）。预取的触发条件是：
+    $$
+        \left\{
+        \begin{aligned}
+             & \texttt{prefetch = on},           \\
+             & \texttt{prefetch\_pages > 0},     \\
+             & \texttt{max\_checking\_pages > 0}
+        \end{aligned}
+        \right.
+    $$
+
+    在启用预取的情况下，远端节点在接收到读取页请求后，将最多向后检查 max\_checking\_pages 相邻页是否是共享页，并至多打包 prefetch\_pages 页一同返回。预取优化的效果取决于两次消息传递获取写权限的模式出现的概率以及共享内存的分配策略。若采用循环页分配算法，使相邻页分配至不同节点，预取优化的效果将受到限制。
 
 
-\section{易用性优化}
-并行编程的复杂性在很大程度上源于环境配置的难度。M-JIAJIA 的设计目标之一是提升系统的易用性和可维护性，从而降低并行编程的门槛。为此，M-JIAJIA 优化了 .jiahosts 的处理逻辑，仅依赖 IP 地址、用户名和密码三元组，而无需依赖系统配置文件 /etc/hosts，并引入 .jiaconf 配置文件，以支持自定义系统通信环境和资源管理。其中，.jiaconf 包含通信栈类型 (comm\_type)、消息池大小 (msg\_buffer\_size)、循环队列大小 (msg\_queue\_size)，以及预取优化开关及其相关参数，从而提升系统的灵活性和配置效率。
-此外，M-JIAJIA 还引入分级日志机制，以满足不同详细程度的调试需求。
+    \section{易用性优化}
+    并行编程的复杂性在很大程度上源于环境配置的难度。M-JIAJIA 的设计目标之一是提升系统的易用性和可维护性，从而降低并行编程的门槛。为此，M-JIAJIA 优化了 .jiahosts 的处理逻辑，仅依赖 IP 地址、用户名和密码三元组，而无需依赖系统配置文件 /etc/hosts，并引入 .jiaconf 配置文件，以支持自定义系统通信环境和资源管理。其中，.jiaconf 包含通信栈类型 (comm\_type)、消息池大小 (msg\_buffer\_size)、循环队列大小 (msg\_queue\_size)，以及预取优化开关及其相关参数，从而提升系统的灵活性和配置效率。
+    此外，M-JIAJIA 还引入分级日志机制，以满足不同详细程度的调试需求。
 
-\section{本章小结}
-本章主要介绍了M-JIAJIA系统的设计与实现。首先简要介绍了系统整体设计结构、函数接口与各核心模块设计。然后详细介绍了M-JIAJIA系统相较于 JIAJIA 系统在通信层UDP通信协议栈的设计与优化，包括端口占用算法设计、I/O多路复用设计、多线程架构设计和可靠通信实现。最后介绍了 M-JIAJIA 在易用性和可维护性上的优化工作。
+    \section{本章小结}
+    本章主要介绍了M-JIAJIA系统的设计与实现。首先简要介绍了系统整体设计结构、函数接口与各核心模块设计。然后详细介绍了M-JIAJIA系统相较于 JIAJIA 系统在通信层UDP通信协议栈的设计与优化，包括端口占用算法设计、I/O多路复用设计、多线程架构设计和可靠通信实现。最后介绍了 M-JIAJIA 在易用性和可维护性上的优化工作。
 
-本章 3.1 节给出 M-JIAJIA 系统的整体框架图，简要介绍了其基本层次结构。
+    本章 3.1 节给出 M-JIAJIA 系统的整体框架图，简要介绍了其基本层次结构。
 
-本章 3.2 节主要介绍 M-JIAJIA 的函数接口。首先，阐述了全局变量 jiahosts 和 jiapid 的作用；随后，详细解析了 jia\_init 初始化模块的执行流程，并介绍 M-JIAJIA 在该模块上的架构优化。接着，探讨了共享内存的分配算法及其对应的接口设计，进一步介绍了消息传递接口和 RMA 接口。最后，以模块概述和使用说明作为小节总结。
+    本章 3.2 节主要介绍 M-JIAJIA 的函数接口。首先，阐述了全局变量 jiahosts 和 jiapid 的作用；随后，详细解析了 jia\_init 初始化模块的执行流程，并介绍 M-JIAJIA 在该模块上的架构优化。接着，探讨了共享内存的分配算法及其对应的接口设计，进一步介绍了消息传递接口和 RMA 接口。最后，以模块概述和使用说明作为小节总结。
 
-本章 3.3 节介绍了 M-JIAJIA 的核心模块设计，涵盖初始化模块、系统配置模块、内存管理模块、锁管理模块、UDP 通信管理模块、RDMA 通信管理模块及统计模块，并简要阐述其功能与实现机制。
+    本章 3.3 节介绍了 M-JIAJIA 的核心模块设计，涵盖初始化模块、系统配置模块、内存管理模块、锁管理模块、UDP 通信管理模块、RDMA 通信管理模块及统计模块，并简要阐述其功能与实现机制。
 
-本章 3.4 节介绍了 M-JIAJIA 的通信层设计，该层包括 UDP 通信栈和 RDMA 通信栈。本节重点探讨 UDP 通信栈的设计，首先阐述 M-JIAJIA 端口占用算法如何将端口占用的复杂度从 $O(n^2)$ 降至 $O(n)$。随后，对比 Linux 系统中的三种多路复用接口——select()、poll() 和 epoll()，并分析 M-JIAJIA 选择 epoll 的原因。接着，介绍 M-JIAJIA 多线程架构设计相较于 JIAJIA 信号驱动 I/O 的优势，并详细说明发送线程、侦听线程和服务线程的实现机制。最后，探讨 M-JIAJIA 如何通过序号、确认及超时重传机制实现可靠通信。
+    本章 3.4 节介绍了 M-JIAJIA 的通信层设计，该层包括 UDP 通信栈和 RDMA 通信栈。本节重点探讨 UDP 通信栈的设计，首先阐述 M-JIAJIA 端口占用算法如何将端口占用的复杂度从 $O(n^2)$ 降至 $O(n)$。随后，对比 Linux 系统中的三种多路复用接口——select()、poll() 和 epoll()，并分析 M-JIAJIA 选择 epoll 的原因。接着，介绍 M-JIAJIA 多线程架构设计相较于 JIAJIA 信号驱动 I/O 的优势，并详细说明发送线程、侦听线程和服务线程的实现机制。最后，探讨 M-JIAJIA 如何通过序号、确认及超时重传机制实现可靠通信。
 
-本章 3.5 节介绍了 M-JIAJIA 的远程预取优化机制，包括共享内存初始化过程中常见的两次消息传递获取写权限模式，以及针对与此 M-JIAJIA 的预取策略。
+    本章 3.5 节介绍了 M-JIAJIA 的远程预取优化机制，包括共享内存初始化过程中常见的两次消息传递获取写权限模式，以及针对与此 M-JIAJIA 的预取策略。
 
-本章 3.6 节简要介绍了 M-JIAJIA 在提高系统易用性和可维护性上的工作。包含配置文件和日志机制两部分。
+    本章 3.6 节简要介绍了 M-JIAJIA 在提高系统易用性和可维护性上的工作。包含配置文件和日志机制两部分。
 
 }
