@@ -1,6 +1,9 @@
 \chapter{绪论}\label{chap:introduction}{
   \section{本文研究背景与意义}
-  随着信息技术迅猛发展，计算密集型任务与数据密集型任务已成为人工智能、流媒体、大数据、云计算和科学计算等领域面临的双重挑战。为应对这些挑战，并行系统架构在垂直扩展和水平扩展两个范式上不断发展。垂直扩展范式聚焦于单节点多核处理器（Multi-core CPUs）、异构加速器（如GPGPU、FPGA）等的深度协同优化，通过指令级或线程级并行提升计算能力；水平扩展范式则依赖于大规模分布式集群系统，结合松耦合任务调度与数据共享策略，实现跨节点的负载均衡与任务协作。
+  随着信息技术迅猛发展，计算密集型任务与数据密集型任务已成为人工智能、流媒体、大数据、云计算和科学计算等领域面临的双重挑战。
+  为应对这些挑战，并行系统架构在垂直扩展和水平扩展两个范式上不断发展。垂直扩展范式聚焦于单节点多核处理器（Multi-core CPUs）、
+  异构加速器（如GPGPU、FPGA）等的深度协同优化，通过指令级或线程级并行提升计算能力；水平扩展范式则依赖于大规模分布式集群系统，
+  结合松耦合任务调度与数据共享策略，实现跨节点的负载均衡与任务协作。
 
   从并行编程的角度来看，这些范式基于以下并行模型：共享内存、消息传递和分
   布式共享内存（见图\ref{fig:model}）。这三种模型在编程时分别具有如下特点：
@@ -12,15 +15,15 @@
 
   上述三种模型中，分布式共享内存（Distributed Shared Memory, DSM）结合了共享内存与消息传递的优势，展现出以下核心特征：
   \begin{enumerate}[leftmargin=1em, align=left]
-    \item 相较于消息传递，其采用透明的数据共享机制并保持与传统共享内存编程模型一致的抽象层，显著降低了分布式应用开发的复杂度；
-    \item 相较于多核共享内存架构，DSM 通过分布式扩展突破了单节点内存容量限制，在构建大规模负载处理系统时展现出更优的性价比；
+    \item \textbf{相较于消息传递}，其采用透明的数据共享机制并保持与传统共享内存编程模型一致的抽象层，显著降低了分布式应用开发的复杂度；
+    \item \textbf{相较于多核共享内存架构}，DSM 通过分布式扩展突破了单节点内存容量限制，在构建大规模负载处理系统时展现出更优的性价比；
   \end{enumerate}
 
   然而，DSM 仍面临两个关键挑战：昂贵的跨节点通信时延开销以及分布式环境下数据一致性维护的复杂性代价。
 
   长期以来，由于这两个挑战以及单节点内多核处理器所展现的强大计算能力，分布式共享内存系统在大规模集群中的应用受到较大限制。
-  但随着高性能网络互连和远程内存访问（RDMA）技术的不断进步，节点内与节点间通信性能差距正逐步缩小，
-  分布式共享内存系统在计算与存储领域潜力正在重新受到关注。
+  但随着高性能网络互连和远程内存访问（RDMA）技术的不断进步，为解决传统消息传递模型中显式数据分区和通信管理的复杂性提供了全新思路，
+  同时为构建低延迟、高可扩展性和高可靠性的分布式系统奠定了坚实基础，分布式共享内存系统在计算与存储领域潜力正在重新受到关注。
   FaRM、Grappa、Argodsm、GAM、DRust 等基于 RDMA 高速网络的分布式共享内存系统层出不穷，它们通过低延迟、高带宽的远程内存访问，
   实现了更高效的数据共享和协同计算。
   这不仅有助于突破单节点内存容量的局限，还能在保证数据一致性的前提下，支持更大规模、更高并发的数据处理任务。
@@ -28,18 +31,18 @@
   \begin{figure}[!htbp]
     \centering
     \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{Img/multi-core.png}
+      \includegraphics[width=\textwidth]{Img/共享内存模型.drawio.pdf}
       \caption{共享内存模型}
       \label{fig:multi-core}
     \end{subfigure}%
     \hspace{1.5cm}
     \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{Img/message-passing.png}
+      \includegraphics[width=\textwidth]{Img/消息传递模型.drawio.pdf}
       \caption{消息传递模型}
       \label{fig:message-passing}
     \end{subfigure}
     \begin{subfigure}[b]{0.6\textwidth}
-      \includegraphics[width=\textwidth]{Img/dsm.png}
+      \includegraphics[width=\textwidth]{Img/分布式共享内存模型.drawio.pdf}
       \caption{分布式共享内存模型}
       \label{fig:dsm}
     \end{subfigure}
@@ -47,24 +50,20 @@
     \label{fig:model}
   \end{figure}
 
-  研究支持 RDMA 通信的分布式共享内存系统，为解决传统消息传递模型中显式数据分区和通信管理的复杂性提供了全新思路，
-  同时为构建低延迟、高可扩展性和高可靠性的分布式系统奠定了坚实基础。通过这一技术的融合，未来的分布式系统能够在统一的内存抽象下，
-  实现透明且高效的数据访问，不仅满足计算密集型应用的需求，也兼顾数据密集型场景，从而推动新型分布式架构的研究与发展。
-
   本文基于国产软件分布式共享内存系统 JIAJIA\citep{huweiwu2001sma,huweiwu2024ca,1999huweiwuJIAJIA} 进行研究。
-  JIAJIA 由胡伟武老师于 90 年代末设计，是我国首款自主研发的 sDSM 系统。
-  其采用页粒度共享，并基于 NUMA 结构构建虚拟共享内存，通过缓存机制加速远程访问。
-  在一致性维护上，JIAJIA 提出了基于锁的缓存一致性协议，避免了目录条目维护的复杂性，提升了系统可扩展性。
+  JIAJIA 由胡伟武老师于 90 年代末设计，是我国首款自主研发的 SDSM 系统。
+  其采用页粒度共享，并基于 NUMA 架构构建虚拟共享内存，通过缓存机制加速远程访问，节点之间采用单线程 UDP 通信进行数据交换。
   JIAJIA 的问世填补了国内研究空白，并被全球 100 余家科研机构采用，成功应用于国产高性能计算机。
 
-  分布式共享内存的抽象依赖于底层消息传递机制，JIAJIA 传统上采用单线程 UDP 通信进行节点间数据交换。
-  然而，随着现代分布式集群普遍采用多核服务器并支持多种网络协议栈，这一方案已难以充分发挥现代硬件的计算与通信潜力。
-  通过引入 RDMA 和多线程优化，JIAJIA 的性能可进一步提升。
+  在此基础上，M-JIAJIA进行了以下两个方面的优化：
+  \begin{enumerate}
+    \item M-JIAJIA 设计并实现了同时支持 UDP 和 RDMA 的双通信栈，不仅有效缓解了传统软件 DSM 系统的网络瓶颈，
+          也为高性能网络环境下的软件分布式共享内存系统提供了探索方向。
+    \item M-JIAJIA 通过将通信流程拆分为入队、发送、监听、接收和处理五个阶段，并利用多线程机制构建流水化通信模型，实现并行加速，
+          从而充分利用底层硬件资源。
+  \end{enumerate}
 
-  在此基础上，M-JIAJIA 设计并实现了同时支持 UDP 和 RDMA 的双通信栈，不仅有效缓解了传统软件 DSM 系统的网络瓶颈，也为高性能网络环境下的软件分布式共享内存系统提供了探索方向。
-  M-JIAJIA 通过将通信流程拆分为入队、发送、监听、接收和处理五个阶段，并利用多线程机制构建流水化通信模型，实现并行加速，从而充分利用底层硬件资源。
   在系统设计与实现过程中，M-JIAJIA 始终围绕可靠性、可扩展性与易用性的平衡，遵循以下核心设计原则：
-
   \begin{itemize}
     \item 正确性的优先级始终高于性能优化。
     \item 系统设计层次化、核心逻辑模块化，便于后续维护和扩展。
@@ -103,65 +102,30 @@
     \end{minipage}
   \end{table}
 
-  紧耦合分布式共享内存系统通常在单节点内实现，典型架构如多处理器之间的高速缓存一致非均匀内存访问（Cache Coherent Non-uniform memory access, ccNUMA）架构和多核之间的非均匀缓存访问（Non-uniform cache access, NUCA）架构。这些 DSM 的特点是支持低时延高带宽访存，由硬件自动维护全局内存状态以提供强一致性保证，以相对较小的缓存行（cacheline）为共享粒度，降低了发生假共享（false sharing）的概率。不足之处是构建成本高，过度依赖硬件而导致可扩展性和可移植性受限，而且共享内存的规模相对较小。
-
-  相比之下，属于松耦合范畴的软件 DSM 系统的实现则灵活的多，可以在系统软件（操作系统或编译器）、运行时库、语言等多个层次实现，具体区分可参见~\ref{sec:implementations}小结内容。
+  相比紧耦合分布式共享内存系统，属于松耦合范畴的软件 DSM 系统的实现较为灵活，
+  可以在系统软件（操作系统或编译器）、运行时库、语言等多个层次实现，具体区分可参见~\ref{sec:implementations}小结内容。
 
 
   \subsection{软件分布式共享内存系统发展历程}
   \begin{enumerate}[leftmargin=1em, align=left]
-    \item \textbf{软件 DSM 研究的起源与 IVY}
-
-          1986 年，Li Kai 博士在论文\citep{likai1986svm} 中验证了在分布式系统上构建共享虚拟内存（SVM）的可行性，并开发了首个软件 DSM 系统 IVY\citep{likai1988ivy}。IVY 采用 页粒度共享，支持 SWMR 访问模式，通过 顺序一致性 保持数据一致性，在并行计算中取得良好加速效果。
+    \item \textbf{早期DSM系统在内存一致性方面的发展历程}
 
           \begin{itemize}
-            \item IVY 的创新：采用 单写多读（SWMR） 访问模式，保证顺序一致性。
-            \item 优点：显著提高并行程序的加速比，减少显式通信需求。
-            \item 缺点：通信开销较大，存在 假共享 问题。
+            \item \textbf{顺序一致性}： 1986 年，Li Kai 博士在论文\citep{likai1986svm} 中验证了在分布式系统上构建共享虚拟内存（SVM）的可行性，并开发了首个软件 DSM 系统 IVY\citep{likai1988ivy}。
+                  IVY 采用 页粒度共享，支持 SWMR 访问模式，通过 顺序一致性 保持数据一致性，在并行计算中取得良好加速效果。
+            \item \textbf{释放一致性(急切更新)}： Munin\citep{bennett1990munin} 采用 释放一致性（RC），仅在特定同步点执行一致性操作，降低通信开销。
+                  同时，它使用 数据类型特定一致性模型，结合 多写协议 与 延迟更新机制，有效缓解假共享问题。
+            \item \textbf{释放一致性(懒惰更新)}： TreadMarks\citep{amza1996treadmarks} 提出 懒惰更新释放一致性（LRC），
+                  相比 Munin 的急切更新，仅在锁的最后释放者和新获取者之间传播一致性消息，从而减少通信量。
+            \item \textbf{域一致性}： JIAJIA\citep{huweiwu2001sma} 采用 域一致性（SC），比 LRC 更宽松，仅同步锁保护区域的修改。
+                  其 基于锁的缓存一致性协议 用锁存储写通知，而非目录，减少管理复杂性，提升可扩展性。
           \end{itemize}
-    \item \textbf{Munin 系统的优化}
 
-          Munin\citep{bennett1990munin} 采用 释放一致性（RC），仅在特定同步点执行一致性操作，降低通信开销。同时，它使用 数据类型特定一致性模型，结合 多写协议 与 延迟更新机制，有效缓解假共享问题。
-
-          \begin{itemize}
-            \item 释放一致性（RC）：减少不必要的一致性维护通信，提高性能。
-            \item 数据类型特定一致性：不同数据类型采用不同的一致性协议，优化存取模式。
-            \item 多写协议：允许不同处理器同时修改共享数据的不同部分（需开发者保证正确性）。
-            \item 延迟更新：在退出临界区后再传播更新，减少锁释放时的通信量。
-          \end{itemize}
-    \item \textbf{TreadMarks 系统的懒惰更新}
-
-          TreadMarks\citep{amza1996treadmarks} 提出 懒惰更新释放一致性（LRC），相比 Munin 的急切更新，仅在锁的最后释放者和新获取者之间传播一致性消息，从而减少通信量。
-
-          \begin{itemize}
-            \item LRC 的优势：减少锁释放时的广播通信，提高并行性。
-            \item 与 Munin 的区别：LRC 采用 点对点一致性维护，而 Munin 采用广播通知。
-            \item 适用场景：适用于共享数据访问不频繁的应用，减少一致性维护开销。
-          \end{itemize}
-    \item \textbf{JIAJIA 的创新}
-
-          JIAJIA 采用 域一致性（SC），比 LRC 更宽松，仅同步锁保护区域的修改。其 基于锁的缓存一致性协议 用锁存储写通知，而非目录，减少管理复杂性，提升可扩展性。
-
-          \begin{itemize}
-            \item 域一致性（SC）：限定一致性传播范围，仅同步锁保护的数据区域。
-            \item 基于锁的缓存一致性：锁存储写通知，避免目录管理的开销。
-            \item 对比：
-                  \begin{itemize}
-                    \item  IVY：顺序一致性，开销较高。
-                    \item Munin：释放一致性，优化通信量，但仍有目录管理。
-                    \item JIAJIA：基于锁的一致性，进一步降低通信开销，提高可扩展性。
-                  \end{itemize}
-          \end{itemize}
     \item \textbf{软件 DSM 研究热度下降}
 
-          多核架构普及后，片内通信远快于 DSM 依赖的网络通信，使得软件 DSM 失去优势。研究方向逐渐转向 优化一致性协议 和 减少通信次数\citep{Cheung1999AMP, abe2003movinghomedsm}。
-
+          多核架构普及后，片内通信远快于 DSM 依赖的网络通信，使得软件 DSM 失去优势。
+          研究方向逐渐转向 优化一致性协议 和 减少通信次数\citep{Cheung1999AMP, abe2003movinghomedsm}。
           \begin{itemize}
-            \item 原因：
-                  \begin{itemize}
-                    \item 多核架构的 片内通信延迟远低于网络通信，降低了 DSM 的优势。
-                    \item DSM 需要 高计算/通信比 才能发挥优势，但负载均衡难以保证。
-                  \end{itemize}
             \item 研究趋势：
                   \begin{itemize}
                     \item 一致性协议优化（减少通信开销）。
@@ -172,18 +136,8 @@
     \item \textbf{FaRM：RDMA 在 DSM 中的应用}
 
           2014 年，微软 FaRM\citep{drago2014farm} 首次结合 RDMA + DSM，替代 TCP/IP，显著降低通信延迟，提升吞吐量，引发后续研究。
+          证明 RDMA + DSM 组合的可行性，推动 RDMA 在 DSM 研究中的应用。
 
-          \begin{itemize}
-            \item RDMA 的优势：
-                  \begin{itemize}
-                    \item 零拷贝（避免 CPU 处理数据传输）。
-                    \item 低延迟、高吞吐（远优于传统 TCP/IP）。
-                  \end{itemize}
-            \item FaRM 贡献：
-                  \begin{itemize}
-                    \item 证明 RDMA + DSM 组合的可行性，推动 RDMA 在 DSM 研究中的应用。
-                  \end{itemize}
-          \end{itemize}
     \item \textbf{RDMA 驱动的后续 DSM 研究}
 
           \begin{itemize}
@@ -195,23 +149,6 @@
             \item \textbf{Drust（2024）}：结合 Rust 所有权模型 限制读写顺序，降低一致性开销，与 SWMR 访问模式兼容。
           \end{itemize}
 
-          \begin{itemize}
-            \item RDMA 对 DSM 的影响：
-                  \begin{itemize}
-                    \item 显著降低通信延迟，
-                    \item 增强 DSM 可行性。
-                  \end{itemize}
-            \item 研究方向：
-                  异步通信、事务处理、新型一致性方案（如 Argodsm、Drust）。
-            \item 不同系统的特点：
-                  \begin{itemize}
-                    \item \textbf{FaRM}：RDMA + DSM 组合的开创者。
-                    \item \textbf{Argodsm}：去目录化，提高一致性协议效率。
-                    \item \textbf{Grappa}：数据密集型计算优化，但未原生支持 RDMA。
-                    \item \textbf{GAM}：部分存储一致性 + RDMA Write，提升吞吐量。
-                    \item \textbf{Drust}：结合 Rust 语言特性优化 DSM。
-                  \end{itemize}
-          \end{itemize}
   \end{enumerate}
 
   \subsection{软件分布式共享内存系统的机遇与挑战}
@@ -219,7 +156,7 @@
 
   \textbf{机遇一：RDMA 高速网络。}RDMA 技术显著降低了跨节点访存开销，且持续优化。InfiniBand 带宽路线图显示，未来 RDMA 网络带宽有望达到 Tbps 级别。例如，英伟达 ConnectX-8 网卡带宽已达 800 Gbps，接近本地内存速度，甚至优于某些 NUMA 节点间通信通道（如 QPI）。这一趋势极大缓解了传统软件 DSM 系统的高延迟通信瓶颈。
 
-  \textbf{机遇二：从计算到存储的应用场景转换。} 传统上，软件 DSM 系统主要用于并行计算（如科学模拟），但随着多核处理器的发展，其在该领域的应用受限，仅适用于通信成本远低于计算成本的场景。然而，随着大数据、AI 和云计算的兴起，软件 DSM 系统的应用正转向大规模数据共享和存储，如键值存储、图计算及事务处理。
+  \textbf{机遇二：从计算到存储的应用场景转换。} 传统上，软件 DSM 系统主要用于并行计算（如科学模拟），但随着多核处理器的发展，其在该领域的应用受限，仅适用于通信成本远低于计算成本的场景。随着大数据、AI 和云计算的兴起，软件 DSM 系统的应用正转向大规模数据共享和存储，如键值存储、图计算及事务处理。
 
   \textbf{关键挑战：强一致性与高性能之间的平衡。} 尽管高速网络降低了传输延迟，但在软件 DSM 系统中实现严格的内存一致性（如顺序一致性）仍会引入同步开销，制约系统性能。如何在一致性与高性能之间找到平衡，仍是当前软件 DSM 系统的关键挑战。
 
@@ -228,9 +165,10 @@
 
   针对上述，本文的主要贡献有：
   \begin{enumerate}[leftmargin=1em, align=left]
-    \item 设计并实现了一个支持双通信栈（UDP+RDMA）的软件分布式共享内存系统 M-JIAJIA，其中采用多线程加速系统通信。
-    \item 设计并实现系统取页时远程预取机制，通过降低通信次数，大大提升了具有强局部性的应用程序的性能。
-    \item 深入分析了基于 \texttt{M-JIAJIA} 库的应用程序在各阶段的性能开销，并对 M-JIAJIA 与 OpenMPI 的关键接口进行了对比测试，从而为后续相关研究提供了重要的参考与支撑。
+    \item 设计并实现了一个支持双通信栈（UDP+RDMA）的软件分布式共享内存系统 M-JIAJIA，充分利用RDMA新型网络技术的高带宽。
+    \item 采用多线程加速M-JIAJIA系统的通信速度，改变了JIAJIA传统的单线程信号驱动通信模型。
+    \item 设计并实现系统取页时的远程预取机制，降低通信次数，大大提升了具有强局部性的应用程序的性能。
+    \item 深入分析了基于 \texttt{M-JIAJIA} 库的应用程序在各阶段的性能开销，并对 M-JIAJIA 与 OpenMPI 的关键接口进行了对比测试，为后续相关研究提供了重要的参考与支撑。
   \end{enumerate}
   % 4. 利用 \texttt{M-JIAJIA} 设计实现了 \texttt{jacobi} 迭代算法，可用来在集群上进行线性方程组和热度扩散计算。
   \section{本文组织结构}
