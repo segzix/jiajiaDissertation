@@ -35,10 +35,10 @@
 \newif\ifartx@times \artx@timesfalse
 \newif\ifartx@others \artx@othersfalse
 \artxifstreq{\artxfontset}{windows}{\artx@windowstrue\artx@timestrue}{%
-\artxifstreq{\artxfontset}{mac}{\artx@mactrue\artx@timestrue}{%
-\artxifstreq{\artxfontset}{adobe}{\artx@adobetrue\artx@timestrue}{%
-\artxifstreq{\artxfontset}{none}{\artx@nonetrue\artx@timestrue}{%
-\artx@otherstrue\artx@timesfalse}}}}
+    \artxifstreq{\artxfontset}{mac}{\artx@mactrue\artx@timestrue}{%
+        \artxifstreq{\artxfontset}{adobe}{\artx@adobetrue\artx@timestrue}{%
+            \artxifstreq{\artxfontset}{none}{\artx@nonetrue\artx@timestrue}{%
+                \artx@otherstrue\artx@timesfalse}}}}
 %-
 %-> LaTeX engine <pdflatex>, <lualatex>, <xelatex>
 %-
@@ -50,10 +50,10 @@
     \artx@xetextrue
     \RequirePackage{xeCJK}% support calling system fonts
 \else\ifluatex%
-    \artx@luatextrue
-\else%
-    \artx@pdftextrue
-\fi\fi%
+        \artx@luatextrue
+    \else%
+        \artx@pdftextrue
+    \fi\fi%
 %-
 %-> Bibliography engine <bibtex>, <biber>
 %-
@@ -347,79 +347,79 @@
     %\RequirePackage{mathrsfs}% enable \mathscr for script alphabet
     %\RequirePackage[cal=cm]{mathalfa}% map styles for calligraphic \mathcal and script \mathscr alphabet
     \IfFontExistsTF{XITS-Regular.otf}{%
-    \RequirePackage{unicode-math}% unicode font configuration <XITS|STIX2>
-    \def\boldsymbol#1{\symbfit{#1}}% treat obsoleteness
-    \providecommand{\Vector}[1]{\symbfit{#1}}% general vectors in bold italic
-    \providecommand{\unitVector}[1]{\symbfup{#1}}% unit vectors in bold roman
-    \providecommand{\Matrix}[1]{\symbfup{#1}}% matrix in bold roman
-    \providecommand{\unitMatrix}[1]{\symbfup{#1}}% identity matrix in bold roman
-    \providecommand{\Tensor}[1]{\symbfsfup{#1}}% tensor in sans-serif bold italic
-    \providecommand{\unitTensor}[1]{\symbfsfup{#1}}% identity tensor in sans-serif bold
-    \setmainfont[NFSSFamily=entextrm]{XITS}[
-      Extension      = .otf,
-      UprightFont    = *-Regular,
-      BoldFont       = *-Bold,
-      ItalicFont     = *-Italic,
-      BoldItalicFont = *-BoldItalic,
-      Ligatures=TeX,
-    ]
-    \setsansfont[NFSSFamily=entextsf]{XITS}[
-      Extension      = .otf,
-      UprightFont    = *-Regular,
-      BoldFont       = *-Bold,
-      ItalicFont     = *-Italic,
-      BoldItalicFont = *-BoldItalic,
-      Ligatures=TeX,
-    ]
-    \setmonofont[NFSSFamily=entexttt]{XITS}[
-      Extension      = .otf,
-      UprightFont    = *-Regular,
-      BoldFont       = *-Bold,
-      ItalicFont     = *-Italic,
-      BoldItalicFont = *-BoldItalic,
-      Ligatures=TeX,
-    ]
-    \setmathfont{XITSMath-Regular}[
-      Extension    = .otf,
-      BoldFont     = XITSMath-Bold,
-      Ligatures=TeX,
-      StylisticSet = 1,
-    ]
-    \setmathfont{XITSMath-Regular}[
-      Extension    = .otf,
-      range={cal,bfcal},
-      Ligatures=TeX,
-      StylisticSet = 1,
-    ]
-    \setmathfont{XITSMath-Regular}[
-      Extension    = .otf,
-      range={scr,bfscr},
-      Ligatures=TeX,
-      StylisticSet = 2,
-    ]
-    \setmathrm{XITSMath-Regular}[
-      Extension    = .otf,
-      BoldFont     = XITSMath-Bold,
-      Ligatures=TeX,
-      StylisticSet = 1,
-    ]
-    \setmathsf{XITSMath-Regular}[
-      Extension    = .otf,
-      BoldFont     = XITSMath-Bold,
-      Ligatures=TeX,
-      StylisticSet = 1,
-    ]
-    \setmathtt{XITSMath-Regular}[
-      Extension    = .otf,
-      BoldFont     = XITSMath-Bold,
-      Ligatures=TeX,
-      StylisticSet = 1,
-    ]
+        \RequirePackage{unicode-math}% unicode font configuration <XITS|STIX2>
+        \def\boldsymbol#1{\symbfit{#1}}% treat obsoleteness
+        \providecommand{\Vector}[1]{\symbfit{#1}}% general vectors in bold italic
+        \providecommand{\unitVector}[1]{\symbfup{#1}}% unit vectors in bold roman
+        \providecommand{\Matrix}[1]{\symbfup{#1}}% matrix in bold roman
+        \providecommand{\unitMatrix}[1]{\symbfup{#1}}% identity matrix in bold roman
+        \providecommand{\Tensor}[1]{\symbfsfup{#1}}% tensor in sans-serif bold italic
+        \providecommand{\unitTensor}[1]{\symbfsfup{#1}}% identity tensor in sans-serif bold
+        \setmainfont[NFSSFamily=entextrm]{XITS}[
+            Extension      = .otf,
+            UprightFont    = *-Regular,
+            BoldFont       = *-Bold,
+            ItalicFont     = *-Italic,
+            BoldItalicFont = *-BoldItalic,
+            Ligatures=TeX,
+        ]
+        \setsansfont[NFSSFamily=entextsf]{XITS}[
+            Extension      = .otf,
+            UprightFont    = *-Regular,
+            BoldFont       = *-Bold,
+            ItalicFont     = *-Italic,
+            BoldItalicFont = *-BoldItalic,
+            Ligatures=TeX,
+        ]
+        \setmonofont[NFSSFamily=entexttt]{XITS}[
+            Extension      = .otf,
+            UprightFont    = *-Regular,
+            BoldFont       = *-Bold,
+            ItalicFont     = *-Italic,
+            BoldItalicFont = *-BoldItalic,
+            Ligatures=TeX,
+        ]
+        \setmathfont{XITSMath-Regular}[
+            Extension    = .otf,
+            BoldFont     = XITSMath-Bold,
+            Ligatures=TeX,
+            StylisticSet = 1,
+        ]
+        \setmathfont{XITSMath-Regular}[
+            Extension    = .otf,
+            range={cal,bfcal},
+            Ligatures=TeX,
+            StylisticSet = 1,
+        ]
+        \setmathfont{XITSMath-Regular}[
+            Extension    = .otf,
+            range={scr,bfscr},
+            Ligatures=TeX,
+            StylisticSet = 2,
+        ]
+        \setmathrm{XITSMath-Regular}[
+            Extension    = .otf,
+            BoldFont     = XITSMath-Bold,
+            Ligatures=TeX,
+            StylisticSet = 1,
+        ]
+        \setmathsf{XITSMath-Regular}[
+            Extension    = .otf,
+            BoldFont     = XITSMath-Bold,
+            Ligatures=TeX,
+            StylisticSet = 1,
+        ]
+        \setmathtt{XITSMath-Regular}[
+            Extension    = .otf,
+            BoldFont     = XITSMath-Bold,
+            Ligatures=TeX,
+            StylisticSet = 1,
+        ]
     }{%
-    \RequirePackage{newtxtext}% main font
-    \RequirePackage[cmintegrals]{newtxmath}% times font, load after amsmath and newtxtext packages
-    \RequirePackage{mathrsfs}% enable \mathscr for script alphabet
-    \RequirePackage[cal=cm]{mathalfa}% map styles for calligraphic \mathcal and script \mathscr alphabet
+        \RequirePackage{newtxtext}% main font
+        \RequirePackage[cmintegrals]{newtxmath}% times font, load after amsmath and newtxtext packages
+        \RequirePackage{mathrsfs}% enable \mathscr for script alphabet
+        \RequirePackage[cal=cm]{mathalfa}% map styles for calligraphic \mathcal and script \mathscr alphabet
     }
     %- Text font: Chinese
     \ifartx@windows%
@@ -427,47 +427,47 @@
         \setCJKsansfont{SimHei}[AutoFakeBold=2.5]%
         \setCJKmonofont{FangSong}%
     \else\ifartx@mac%
-        \setCJKmainfont{Songti SC}[%
-            UprightFont    = * Light,
-            BoldFont       = * Bold,
-            ItalicFont     = Kaiti SC,
-            BoldItalicFont = Kaiti SC Bold,
-        ]
-        \setCJKsansfont{Heiti SC}[BoldFont = * Medium]%
-        \setCJKmonofont{STFangsong}%
-    \else\ifartx@adobe% call font from system font library
-        \setCJKmainfont{AdobeSongStd-Light}[%
-            AutoFakeBold=2.5,
-            ItalicFont=AdobeKaitiStd-Regular,
-        ]
-        \setCJKsansfont{AdobeHeitiStd-Regular}[%
-            AutoFakeBold=2.5,
-        ]%
-        \setCJKmonofont{AdobeFangsongStd-Regular}%
-    \else\ifartx@none% call font from local fontdir
-    %- Without path: i) if font specified by a string without extension, fontspec will
-    %- treat the given string as font name and use system fontconfig to search the font name
-    %- in system font library; ii) if font specified by a string with extension, fontspec will
-    %- treat the given string as font filename and use kpathsea to search the font filename in
-    %- LaTeX distribution
-    %- With path: fontspec will treat the given string as font filename and use kpathsea to
-    %- search the font filename in path, and extension is optional but recommended in this case
-        \setCJKmainfont{AdobeSongStd-Light}[%
-            Path=\artx@fontdir,
-            Extension=.otf,
-            AutoFakeBold=2.5,
-            ItalicFont=AdobeKaitiStd-Regular,
-        ]
-        \setCJKsansfont{AdobeHeitiStd-Regular}[%
-            Path=\artx@fontdir,
-            Extension=.otf,
-            AutoFakeBold=2.5,
-        ]%
-        \setCJKmonofont{AdobeFangsongStd-Regular}[%
-            Path=\artx@fontdir,
-            Extension=.otf,
-        ]
-    \fi\fi\fi\fi
+            \setCJKmainfont{Songti SC}[%
+                UprightFont    = * Light,
+                BoldFont       = * Bold,
+                ItalicFont     = Kaiti SC,
+                BoldItalicFont = Kaiti SC Bold,
+            ]
+            \setCJKsansfont{Heiti SC}[BoldFont = * Medium]%
+            \setCJKmonofont{STFangsong}%
+        \else\ifartx@adobe% call font from system font library
+                \setCJKmainfont{AdobeSongStd-Light}[%
+                    AutoFakeBold=2.5,
+                    ItalicFont=AdobeKaitiStd-Regular,
+                ]
+                \setCJKsansfont{AdobeHeitiStd-Regular}[%
+                    AutoFakeBold=2.5,
+                ]%
+                \setCJKmonofont{AdobeFangsongStd-Regular}%
+            \else\ifartx@none% call font from local fontdir
+                    %- Without path: i) if font specified by a string without extension, fontspec will
+                    %- treat the given string as font name and use system fontconfig to search the font name
+                    %- in system font library; ii) if font specified by a string with extension, fontspec will
+                    %- treat the given string as font filename and use kpathsea to search the font filename in
+                    %- LaTeX distribution
+                    %- With path: fontspec will treat the given string as font filename and use kpathsea to
+                    %- search the font filename in path, and extension is optional but recommended in this case
+                    \setCJKmainfont{AdobeSongStd-Light}[%
+                        Path=\artx@fontdir,
+                        Extension=.otf,
+                        AutoFakeBold=2.5,
+                        ItalicFont=AdobeKaitiStd-Regular,
+                    ]
+                    \setCJKsansfont{AdobeHeitiStd-Regular}[%
+                        Path=\artx@fontdir,
+                        Extension=.otf,
+                        AutoFakeBold=2.5,
+                    ]%
+                    \setCJKmonofont{AdobeFangsongStd-Regular}[%
+                        Path=\artx@fontdir,
+                        Extension=.otf,
+                    ]
+                \fi\fi\fi\fi
 \fi
 %-
 %-> Bibliography processor and package
@@ -525,8 +525,8 @@
     \fi
     \ifartx@authoryear% enable author year citation style
         \RequirePackage[backend=biber,style=\artxbiberauy,mincitenames=1,maxcitenames=2]{biblatex}%
-            \renewrobustcmd*{\citet}{\textcite}%
-            \renewrobustcmd*{\citep}{\parencite}%
+        \renewrobustcmd*{\citet}{\textcite}%
+        \renewrobustcmd*{\citep}{\parencite}%
     \fi
     \ifartx@alpha% enable alpha citation style
         \RequirePackage[backend=biber,style=\artxbiberalp]{biblatex}%
@@ -781,44 +781,44 @@
 %-> Configure landscape environment
 %-
 \ifartx@lscape%
-\fancypagestyle{lscape}{% landscape layout style
-    \fancyhf{}% clear fields
-    \fancyhead[C]{%
-        \begin{textblock}{1.0}[0.5,0.5](0.08,0.5)%
-            \rotatebox{90}{%
-                \footnotesize \ifnumodd{\value{page}}{\leftmark}{\@title}%
-            }%
-        \end{textblock}%
-        \begin{textblock}{1.0}[0.5,0.5](0.08,0.5)%
-            \rotatebox{90}{%
-                \rule[-14pt]{\textwidth}{0.8pt}%
-            }%
-        \end{textblock}%
-    }%
-    \fancyfoot[C]{%
-        \begin{textblock}{1.0}[0.5,0.5](0.92,0.5)
-            \rotatebox{90}{%
-                \footnotesize \ifnumodd{\value{page}}{\hspace*{\fill}\thepage}{\thepage\hspace*{\fill}}%
-            }%
-        \end{textblock}%
-    }%
-    %- textpos: \begin{textblock}{<blockwidth>}[<ho>,<vo>](<hpos>,<vpos>) text... \end{textblock}
-    %- origin of the absolute coordinate is the top-left corner of the page
-    %- text will be set in a box <blockwidth> modules wide and placed on the page
-    %- with the point [<ho>,<vo>] of the block at the position (<hpos>,<vpos>) of the page
-    %- [<ho>,<vo>] are fractions of the width and height of the text box and specify
-    %- the reference point of the text box, [0,0]: top left; [0.5,0.5]: middle; [0,1]: bottom left
-    %- [<hpos>,<vpos>] are fractions of the width and height of the page and specify
-    %- the position point on page, [0,0]: top left; [0.5,0.5]: middle; [0,1]: bottom left
-    %- set unit of <blockwidth>, <hpos> arguments via module 
-    \setlength{\TPHorizModule}{\paperwidth}%
-    %- set unit of <vpos> argument via module 
-    \setlength{\TPVertModule}{\paperheight}%
-    %- \rule[raise]{width}{thickness}
-    %- \rotatebox[origin=c]{angle}{text}
-    \renewcommand{\headrulewidth}{0pt}% header rule
-    \renewcommand{\footrulewidth}{0pt}% footer rule
-}
+    \fancypagestyle{lscape}{% landscape layout style
+        \fancyhf{}% clear fields
+        \fancyhead[C]{%
+            \begin{textblock}{1.0}[0.5,0.5](0.08,0.5)%
+                \rotatebox{90}{%
+                    \footnotesize \ifnumodd{\value{page}}{\leftmark}{\@title}%
+                }%
+            \end{textblock}%
+            \begin{textblock}{1.0}[0.5,0.5](0.08,0.5)%
+                \rotatebox{90}{%
+                    \rule[-14pt]{\textwidth}{0.8pt}%
+                }%
+            \end{textblock}%
+        }%
+        \fancyfoot[C]{%
+            \begin{textblock}{1.0}[0.5,0.5](0.92,0.5)
+                \rotatebox{90}{%
+                    \footnotesize \ifnumodd{\value{page}}{\hspace*{\fill}\thepage}{\thepage\hspace*{\fill}}%
+                }%
+            \end{textblock}%
+        }%
+        %- textpos: \begin{textblock}{<blockwidth>}[<ho>,<vo>](<hpos>,<vpos>) text... \end{textblock}
+        %- origin of the absolute coordinate is the top-left corner of the page
+        %- text will be set in a box <blockwidth> modules wide and placed on the page
+        %- with the point [<ho>,<vo>] of the block at the position (<hpos>,<vpos>) of the page
+        %- [<ho>,<vo>] are fractions of the width and height of the text box and specify
+        %- the reference point of the text box, [0,0]: top left; [0.5,0.5]: middle; [0,1]: bottom left
+        %- [<hpos>,<vpos>] are fractions of the width and height of the page and specify
+        %- the position point on page, [0,0]: top left; [0.5,0.5]: middle; [0,1]: bottom left
+        %- set unit of <blockwidth>, <hpos> arguments via module 
+        \setlength{\TPHorizModule}{\paperwidth}%
+        %- set unit of <vpos> argument via module 
+        \setlength{\TPVertModule}{\paperheight}%
+        %- \rule[raise]{width}{thickness}
+        %- \rotatebox[origin=c]{angle}{text}
+        \renewcommand{\headrulewidth}{0pt}% header rule
+        \renewcommand{\footrulewidth}{0pt}% footer rule
+    }
 \fi
 %-
 %-> Configure list environment
