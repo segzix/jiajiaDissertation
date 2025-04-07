@@ -1,14 +1,14 @@
-\chapter{RDMA 通信栈的设计与实现}\label{chap:RJIAJIA}{
+\chapter{RDMA 通信栈的设计与实现}\label{chap:RDMA}{
     本章主要介绍 M-JIAJIA系统中 RDMA 通信栈的架构设计与实现方案。作为通信层组件，RDMA 通信栈与 UDP 通信栈均可用于完成系统消息通信任务，用户可根据底层通信环境在系统运行前通过 .jiaconf 配置实现通信栈的动态切换。在架构设计上，RDMA 和 UDP 通信栈均采用多线程设计，但由于 RDMA通信栈与底层网络适配器深度集成，在实现上与 UDP 通信栈呈现显著差异。
 
     RDMA 通信首先需要根据应用场景选择合适的通信模式和通信原语，并基于所选模式和原语构建 RDMA 通信管理器，以管理所需的通信资源。随后，根据通信链路模式执行建连后通信或无连接通信。
 
-    \section{设计概览}
+    \section{设计概览}\label{sec:设计概览}
 
     \subsection{RDMA 通信模式与通信原语选择}
 
-    M-JIAJIA 在可靠连接（RC）模式下采用 Send 原语进行消息传递，这一设计选择主要基于考虑
-    M-JIAJIA 对通信可靠性要求严格，RC 模式不仅免除了应用层的分片处理，还省去了额外的可靠性与有序性保障，从而大大简化了系统设计。
+    M-JIAJIA 在可靠连接（RC）模式下采用 Send 原语进行消息传递，这一设计选择主要基于考虑M-JIAJIA 对通信可靠性要求严格。
+    RC 模式免除了应用层的分片处理，同时还具有可靠性与有序性保障，从而大大简化了系统设计。
 
     图~\ref{fig:mjiajia-send-recv}显示了 RC 模式下使用 Send 原语发送固定大小消息的示例，图中省略了队列对之间的私有连接以及完成队列元素的生成与处理。为了实现图示通信，M-JIAJIA 采用 RDMA CM 完成建连操作。而且考虑到发送与接收的差异，M-JIAJIA 使用公共输出队列与连接私有输入队列的方案来降低消息队列空间占用。此外，M-JIAJIA 应用多线程优化通信架构设计，以提升整体性能。
     \begin{figure}[H]
@@ -48,46 +48,7 @@
                   \item \textbf{RDMA 连接管理结构数组}：连接管理结构数组记录了与每个远端节点的连接信息。
                   \item \textbf{RDMA 建立连接线程标识}：M-JIAJIA 采用客户端-服务器模式建立连接。在建连阶段，节点分别创建客户端和服务器线程以完成连接。其建连方案具有独特性：每个节点至多创建一个服务器线程用于监听连接请求，同时可创建多个客户端线程主动发起连接。线程标识用于存储和管理线程的信息，便于线程创建、同步和管理。
               \end{itemize}
-
-        \item \textbf{配置参数}
-              \begin{itemize}[leftmargin=*, nosep]
-                  \item \textbf{批处理数目}: 该参数在 M-JIAJIA 中用于指定在下发接收工作请求时一次下发的工作请求的数量
-              \end{itemize}
     \end{enumerate}
-
-    % \begin{lstlisting}[style=CStyle]
-    % typedef struct jia_context {
-    %     struct ibv_context *context;
-    %     struct ibv_pd *pd;                      // common pd
-    %     struct ibv_comp_channel *recv_comp_channel;  // common recv io completion channel
-    %     struct ibv_comp_channel *send_comp_channel;
-
-    %     // port related
-    %     int ib_port;                   // ib port number
-
-    %     // info data
-    %     int batching_num; // post recv wr doorbell batching num
-
-    %     // rdma connect (Maxhosts inqueues, only one outqueue)
-    %     msg_queue_t *outqueue;
-    %     struct ibv_mr *out_mr[QueueSize];
-    %     rdma_connect_t connect_array[Maxhosts];
-
-    %     // connection parameters
-    %     pthread_t server_thread;   // server thread for connection from client on other hosts
-    %     pthread_t *client_threads; // client threads used to connect other hosts
-    % } jia_context_t;
-
-    % typedef struct rdma_connect {
-    %     bool connected;
-    %     unsigned    snd_seq;
-    %     unsigned    rcv_seq;
-    %     struct rdma_cm_id id;
-
-    %     struct ibv_mr **in_mr;
-    %     msg_queue_t *inqueue;
-    % } rdma_connect_t;
-    % \end{lstlisting}
 
     \subsection{RDMA 通信栈组成模块}
 
@@ -106,10 +67,10 @@
         \label{fig:mjiajia-rdma-modules}
     \end{figure}
 
-    \section{可靠通信连接建立机制}
+    \section{可靠通信连接建立机制}\label{sec:可靠通信连接建立机制}
     M-JIAJIA 采用基于 RDMA CM 的建连方式。该方式具有三个显著优势：
     \begin{enumerate}[label=\arabic*.]
-        \item 编程简单，RDMA CM 封装了底层复杂的连接建立过程,（使开发者无需直接操作Verbs API即可完成通信流程。
+        \item 编程简单，RDMA CM 封装了底层复杂的连接建立过程，使开发者无需直接操作Verbs API即可完成通信流程。
         \item 开销低，RDMA CM 支持异步操作模式，通过事件通道（Event Channel）实现非阻塞通信，避免轮询带来的开销。
         \item 可移植性强，RDMA CM 兼容InfiniBand、RoCEV2和iWARP多种 RDMA 实现，无需针对不同硬件进行代码修改。
     \end{enumerate}
@@ -122,101 +83,6 @@
         \bicaption{M-JIAJIA RDMA CM 建连流程图}{M-JIAJIA RDMA CM Connection Establishment Flowchart}
         \label{fig:mjiajia-cm-connection}
     \end{figure}
-
-    \subsection{建连客户端与服务器}
-
-    % \begin{algorithm}
-    %     \caption{RDMA Client Connection Thread}
-    %     \begin{algorithmic}[1]
-    %         \Procedure{SyncClientThread}{arg}
-    %             \State $server\_id \gets$ \Call{ConvertToInt}{arg}
-    %             \State $retry\_flag \gets true$, $retry\_count \gets 0$
-
-    %             \State $ec \gets$ \Call{RdmaCreateEventChannel}{}
-
-    %             \While{$retry\_flag$ \textbf{and} $retry\_count < MAX\_RETRY$}
-    %                 \State $retry\_flag \gets false$
-    %                 \State $id \gets$ \Call{RdmaCreateId}{$ec$}
-    %                 \State $addr \gets$ \Call{SetAddress}{$server\_id$}
-    %                 \State \Call{RdmaResolveAddr}{$id$, $addr$, $2000$}
-
-    %                 \State
-    %                 \While{true}
-    %                     \State \Call{RdmaGetCmEvent}{$ec$, $event$}
-
-    %                     \If{$event.type = RDMA\_ROUTE\_RESOLVED$}
-    %                         \State $client\_id \gets event.param.conn.private\_data$
-    %                         \State $ctx.recv\_comp\_channel \gets$ \Call{CreateCompletionChannel}{}
-    %                         \State $ctx.send\_comp\_channel \gets$ \Call{CreateCompletionChannel}{}
-
-    %                         \State
-    %                         \State Initialize $qp\_attr$
-    %                         \State Request CQ notifications
-    %                         \State $ctx.pd \gets$ \Call{Allocate}{$event.id$}
-    %                         \State \Call{CreateQP}{$event.id$, $ctx.pd$, $qp\_attr$}
-
-    %                         \State
-    %                         \State Initialize $conn\_param$
-    %                         \State $event.id \gets$ \Call{RDMAConnect}{$conn\_param$}
-    %                     \ElsIf{$event.type = RDMA\_ESTABLISHED$}
-    %                         \State Update $ctx.connect\_ array[client\_id]$ connection status
-    %                     \Else
-    %                         \State \textbf{Default action}
-    %                     \EndIf
-
-    %                     \State \Call{RdmaAckCmEvent}{$event$}
-    %                 \EndWhile
-
-    %                 \Statex \textbf{NextTry:}
-    %             \EndWhile
-
-    %             \Statex \textbf{Cleanup:}
-    %             \State \Call{RdmaDestroyEventChannel}{$ec$}
-    %             \State \Return NULL
-    %         \EndProcedure
-    %     \end{algorithmic}
-    % \end{algorithm}
-
-    % \begin{algorithm}
-    % \caption{RDMA Synchronization Server Thread}
-    % \begin{algorithmic}[1]
-    %     \State $ec \gets$ \Call{Create\_event\_channel}{$ $} \;
-    %     \State $listener \gets$ \Call{Create\_RDMA\_listener\_ID}{$ $} \;
-    %     \State Initialize $addr \gets \{ip, start\_port + jia\_pid\}$ \;
-    %     \State \Call{Bind\_addr}{$listener, addr$} \;
-    %     \While{true}
-    %         \State $event \gets$ \Call{rdma\_get\_cm\_event}{$ec$} \;
-    %         \If{$event.type = $RDMA\_CM\_EVENT\_CONNECT\_REQUEST}
-    %             \State $client\_id \gets event.param.conn.private\_data$ \;
-    %             \State $ctx.recv\_comp\_channel,ctx.send\_comp\_channel \gets$ \Call{create\_completion\_channel}{$ $} \;
-
-    %             \State
-    %             \State Initialize $qp\_attr$ \;
-    %             \State Request CQ notifications \;
-    %             \State $ctx.pd \gets$ \Call{allocate}{$event.id$} \;
-    %             \State \Call{create\_QP}{$event.id$, $ctx.pd$, $qp\_attr$} \;
-
-    %             \State
-    %             \State Initialize $conn\_param$ \;
-    %             \State $event.id \gets$ \Call{RDMA\_accept}{$conn\_param$} \;
-    %         \ElsIf{$event.type = $RDMA\_CM\_EVENT\_ESTABLISHED}
-    %             \State Update $ctx.connect\_array[client\_id]$ connection status \;
-    %             \State $completion\_num \gets completion\_num + 1$ \;
-    %             \If{$completion\_num = system\_setting.jia\_pid$}
-    %                 \State \textbf{goto} Cleanup \;
-    %             \EndIf
-    %         \Else \quad \textbf{Default action} \;
-    %         \EndIf
-    %         \State \Call{rdma\_ack\_event}{$event$} \;
-    %     \EndWhile
-
-    %     \State
-    %     \State \textbf{Cleanup:} \;
-    %     \State \Call{Destroy\_RDMA\_listener\_ID}{$listener$} \;
-    %     \State \Call{Destroy\_event\_channel}{$ec$} \;
-    %     \State \Return \;
-    % \end{algorithmic}
-    % \end{algorithm}
 
     \subsection{RDMA 集群建连算法}
 
@@ -264,7 +130,7 @@
         \end{algorithmic}
     \end{algorithm}
 
-    \section{RDMA 多线程通信架构设计}
+    \section{RDMA 多线程通信架构设计}\label{sec:RDMA 多线程通信架构设计}
 
     \begin{figure}[H]
         \centering
@@ -412,42 +278,10 @@
         \end{algorithmic}
     \end{algorithm}
 
-
-    % \begin{algorithm}
-    %     \caption{client thread post send}
-    %     \begin{algorithmic}[1] % [1] 使得每行都有行号
-    %         \Function{post\_send}{}
-    %         \State initialize $sge \gets \{out\_mr[outqueue$->$head] \}$
-    %         \State initialize $wr \gets \{sge\}$
-
-    %         \State
-    %         \State $msg\_ptr \gets$ $outqueue[outqueue$->$head]$
-
-    %         \While{\Call{ibv\_post\_send}{$connect\_array[msg\_ptr$->$pid]$}}
-    %         \EndWhile
-
-    %         \State
-    %         \State $cq\_ptr \gets$ \Call{ibv\_get\_cq\_event}{$send\_comp\_channel$}
-    %         \State \Call{ibv\_req\_notify\_cq}{$cq\_ptr$}
-
-    %         \State
-    %         \State $wc \gets$ \Call{ibv\_poll\_cq}{$connect\_array[msg\_ptr$->$topid]$->$send\_cq$}
-    %         \If{$wc.status \neq \text{IBV\_WC\_SUCCESS}$}
-    %         \State \textbf{return} $1$
-    %         \EndIf
-
-    %         \State
-    %         \State \Call{ibv\_ack\_cq\_events}{$cq\_ptr$}
-    %         \State \textbf{return} $0$
-    %         \EndFunction
-    %     \end{algorithmic}
-    % \end{algorithm}
-
-
     \section{本章小结}
-    本章 4.1 节介绍了 M-JIAJIA RDMA通信模式与通信原语选择，并给出了 M-JIAJIA 中RDMA管理器的基本设计与组成模块。
+    本章 \ref{sec:设计概览} 节介绍了 M-JIAJIA RDMA通信模式与通信原语选择，并给出了 M-JIAJIA 中RDMA管理器的基本设计与组成模块。
 
-    本章 4.2 节介绍了 M-JIAJIA RDMA基本的建连过程和对应的算法。
+    本章 \ref{sec:可靠通信连接建立机制} 节介绍了 M-JIAJIA RDMA基本的建连过程和对应的算法。
 
-    本章 4.3 节介绍了 M-JIAJIA 多线程的任务划分算法，以及接收端发送端每个msg slot的状态转换。
+    本章 \ref{sec:RDMA 多线程通信架构设计} 节介绍了 M-JIAJIA 多线程的任务划分算法，以及接收端发送端每个msg slot的状态转换。
 }

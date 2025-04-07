@@ -3,7 +3,7 @@
     M-JIAJIA 采用分层模块化设计，解耦通信层和系统核心模块层，两层之间通过消息队列进行通信。
     通信层支持 UDP 通信和 RDMA 通信两种方案，并采用多线程流水化技术优化通信效率。
 
-    \section{设计概览}
+    \section{设计概览}\label{sec:设计概览}
     \begin{figure}[!htbp]
         \centering
         \includegraphics[width=1.0\textwidth]{Img/MJIAJIA系统框架图.drawio.pdf}
@@ -14,7 +14,7 @@
     其中应用层主要包含了 M-JIAJIA 系统的并行测试程序（将在~\ref{chap:experiments}章节做进一步介绍）。
     本章节剩余部分将主要介绍接口层、核心模块层、通信层的设计与实现。
 
-    \section{函数接口设计}
+    \section{函数接口设计}\label{sec:函数接口设计}
     M-JIAJIA 在函数接口设计上保持了对 JIAJIA 系统接口的兼容，提供列表~\ref{lst:jia-interface}所示 C 语言的编程接口。主要包括全局变量、系统操作、内存操作、同步操作、消息传递接口、和 RDMA（远程内存访问） 接口等。
     \begin{lstlisting}[style=CStyle, caption={M-JIAJIA C 接口总览}, label={lst:jia-interface}]
 /* 全局变量 */
@@ -99,12 +99,12 @@ int main(int argc, char **argv) {
 }
     \end{lstlisting}
 
-    \section{核心模块设计}
+    \section{核心模块设计}\label{sec:核心模块设计}
     核心模块层主要由系统的核心处理逻辑组成，负责管理关键数据结构。
     M-JIAJIA的核心模块与JIAJIA基本类似，增加了一个RDMA通信管理模块负责记录网卡参数、
     分配的网卡资源以及连接相关的参数和资源等信息，来进行RDMA通信。
 
-    \section{M-JIAJIA优化设计}
+    \section{M-JIAJIA优化设计}\label{sec:M-JIAJIA优化设计}
     \subsection{通信栈优化}
     M-JIAJIA 分层设计分离了通信任务和系统任务，系统任务只需与消息队列交互即可完成消息的发送与接收，而通信层负责具体的消息传输。
     通信层支持两种独立的通信协议栈：传统的 UDP 通信栈和 RDMA 通信栈。对于这两个通信栈，M-JIAJIA均作出了相对于JIAJIA的优化设计。
@@ -319,11 +319,11 @@ int main(int argc, char **argv) {
     \end{itemize}
 
     \section{本章小结}
-    本章 3.1 节给出 M-JIAJIA 系统的整体框架图，简要介绍了其基本层次结构。
+    本章 \ref{sec:设计概览}节给出 M-JIAJIA 系统的整体框架图，简要介绍了其基本层次结构。
 
-    本章 3.2 节主要介绍 M-JIAJIA 的函数接口。包括配置文件，系统的基本操作和使用说明。
+    本章 \ref{sec:函数接口设计} 节主要介绍 M-JIAJIA 的函数接口。包括配置文件，系统的基本操作和使用说明。
 
-    本章 3.3 节介绍了 M-JIAJIA 的核心模块设计，相比JIAJIA增加了一个RDMA通信模块。
+    本章 \ref{sec:核心模块设计} 节介绍了 M-JIAJIA 的核心模块设计，相比JIAJIA增加了一个RDMA通信模块。
 
-    本章 3.4 节介绍了 M-JIAJIA 相比JIAJIA的一些优化，包括通信栈优化，远程预取优化等。
+    本章 \ref{sec:M-JIAJIA优化设计} 节介绍了 M-JIAJIA 相比JIAJIA的一些优化，包括通信栈优化，远程预取优化等。
 }
