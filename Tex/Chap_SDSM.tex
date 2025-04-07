@@ -108,7 +108,7 @@
     随后并行执行协同完成任务。图~\ref{fig:JIAJIA-design} 显示了JIAJIA系统所包含的核心模块。
 
     \begin{enumerate}[label=\arabic*.]
-        \item \textbf{初始化模块。}初始化模块用于对整个系统进行准备操作（见图~\ref{fig:JIAJIA-init}），负责加载配置文件（.jiahosts，.jiaconfig）以及初始化各个模块。
+        \item \textbf{初始化模块:}初始化模块用于对整个系统进行准备操作（见图~\ref{fig:JIAJIA-init}），负责加载配置文件（.jiahosts，.jiaconfig）以及初始化各个模块。
               \begin{figure}[!htbp]
                   \centering
                   \includegraphics[width=0.6\textwidth]{Img/JIAJIA初始化模块.drawio.pdf}
@@ -116,7 +116,7 @@
                   \label{fig:JIAJIA-init}
               \end{figure}
 
-        \item \textbf{内存管理器。} JIAJIA 采用 NUMA 结构，是一个基于宿主（home-based）的系统，每个共享页都有对应的宿主节点核心包含三个数据结构：用于记录本地分配的共享页的目录（home），用于记录缓存页状态的缓存目录（cache），用于记录全部共享页的页目录（page）。JIAJIA 的内存组织如~\ref{fig:JIAJIA-memory}所示。
+        \item \textbf{内存管理器:} JIAJIA 采用 NUMA 结构，是一个基于宿主（home-based）的系统，每个共享页都有对应的宿主节点核心包含三个数据结构：用于记录本地分配的共享页的目录（home），用于记录缓存页状态的缓存目录（cache），用于记录全部共享页的页目录（page）。JIAJIA 的内存组织如~\ref{fig:JIAJIA-memory}所示。
               \begin{figure}[!htbp]
                   \centering
                   \includegraphics[width=1.0\textwidth]{Img/JIAJIA内存组织.drawio.pdf}
@@ -124,7 +124,7 @@
                   \label{fig:JIAJIA-memory}
               \end{figure}
 
-        \item \textbf{SIGSEGV 信号处理程序。} JIAJIA 系统中任何节点都可以透明地访问任一共享内存位置。这一机理利用了操作系统的信号机制：当应用程序试图访问无权限内存时，将触发段违例信号（SIGSEGV），操作系统将捕获该信号并将其发送给预设的 SIGSEGV 信号处理程序。该程序将完成对本地内存的授权或对远程内存的取页操作。如图~\ref{fig:JIAJIA-access}所示。
+        \item \textbf{SIGSEGV 信号处理程序:} JIAJIA 系统中任何节点都可以透明地访问任一共享内存位置。这一机理利用了操作系统的信号机制：当应用程序试图访问无权限内存时，将触发段违例信号（SIGSEGV），操作系统将捕获该信号并将其发送给预设的 SIGSEGV 信号处理程序。该程序将完成对本地内存的授权或对远程内存的取页操作。如图~\ref{fig:JIAJIA-access}所示。
               \begin{figure}[!htbp]
                   \centering
                   \includegraphics[width=0.8\textwidth]{Img/JIAJIA访问远端内存.drawio.pdf}
@@ -132,9 +132,9 @@
                   \label{fig:JIAJIA-access}
               \end{figure}
 
-        \item \textbf{通信管理器。} JIAJIA 使用通信管理器记录并管理发送和接收的套接字描述符。
+        \item \textbf{通信管理器:} JIAJIA 使用通信管理器记录并管理发送和接收的套接字描述符。
 
-        \item \textbf{消息处理程序。} JIAJIA 底层基于消息传递机制，消息处理程序主要负责处理接收到的本地或远程消息，并根据消息类型执行相应的操作。如图~\ref{fig:JIAJIA-message-handle}。图~\ref{fig:JIAJIA-message-types}展示了JIAJIA中存在的消息类型。
+        \item \textbf{消息处理程序：} JIAJIA 底层基于消息传递机制，消息处理程序主要负责处理接收到的本地或远程消息，并根据消息类型执行相应的操作。如图~\ref{fig:JIAJIA-message-handle}。图~\ref{fig:JIAJIA-message-types}展示了JIAJIA中存在的消息类型。
               \begin{figure}[!htbp]
                   \centering
                   \includegraphics[width=0.7\textwidth]{Img/JIAJIA底层消息传递机制.drawio.pdf}
@@ -149,7 +149,7 @@
                   \label{fig:JIAJIA-message-types}
               \end{figure}
 
-        \item \textbf{锁管理器。}
+        \item \textbf{锁管理器：}
               锁管理器主要负责同步变量的分配管理，如图~\ref{fig:JIAJIA-lock-manager}。JIAJIA 支持两种同步变量：锁（lock）和屏障（barrier），处理方式如下：
               \begin{itemize}
                   \item 对于锁同步变量，锁管理器维护一个先入先出队（FIFO）队列，按请求顺序依次授予锁权限；

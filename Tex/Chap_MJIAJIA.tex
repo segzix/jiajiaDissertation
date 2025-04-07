@@ -1,5 +1,7 @@
 \chapter{多线程 M-JIAJIA 的设计与实现}\label{chap:MJIAJIA}{
-    本章主要介绍 M-JIAJIA 的设计与实现，M-JIAJIA 在 JIAJIA 的基础上实现，并继承了域一致性模型，其主要优化集中在通信子系统。M-JIAJIA 采用分层模块化设计，解耦通信层和系统核心模块层，两个层之间通过消息队列进行通信。通信层支持 UDP 通信和 RDMA 通信两种方案，并采用多线程流水化技术优化通信效率。
+    本章主要介绍 M-JIAJIA 的设计与实现，M-JIAJIA 在 JIAJIA 的基础上实现，并继承了域一致性模型，其主要优化集中在通信子系统。
+    M-JIAJIA 采用分层模块化设计，解耦通信层和系统核心模块层，两层之间通过消息队列进行通信。
+    通信层支持 UDP 通信和 RDMA 通信两种方案，并采用多线程流水化技术优化通信效率。
 
     \section{设计概览}
     \begin{figure}[!htbp]
@@ -8,7 +10,9 @@
         \bicaption{M-JIAJIA系统框架图}{M-JIAJIA Sytem Framework Diagram}
         \label{fig:system-arch}
     \end{figure}
-    M-JIAJIA 的整体架构如图~\ref{fig:system-arch} 所示。从上到下依次是应用层、接口层、核心模块层、通信层。其中应用层主要包含了 M-JIAJIA 系统的并行测试程序（将在~\ref{chap:experiments}章节做进一步介绍）。本章节剩余部分将主要介绍接口层、核心模块层、通信层的设计与实现。
+    M-JIAJIA 的整体架构如图~\ref{fig:system-arch} 所示。从上到下依次是应用层、接口层、核心模块层、通信层。
+    其中应用层主要包含了 M-JIAJIA 系统的并行测试程序（将在~\ref{chap:experiments}章节做进一步介绍）。
+    本章节剩余部分将主要介绍接口层、核心模块层、通信层的设计与实现。
 
     \section{函数接口设计}
     M-JIAJIA 在函数接口设计上保持了对 JIAJIA 系统接口的兼容，提供列表~\ref{lst:jia-interface}所示 C 语言的编程接口。主要包括全局变量、系统操作、内存操作、同步操作、消息传递接口、和 RDMA（远程内存访问） 接口等。
@@ -41,7 +45,7 @@ int jia_recv(char *buf, int len, int frompid, int tag);
     \subsection{配置文件}
     M-JIAJIA 程序采用单程序多数据（Single Program Multiple Data, SPMD）并行计算模式，运行时系统将同一程序动态部署到分布式计算节点上协同执行。
     系统向开发者提供两个配置文件：.jiahosts 和 .jiaconfig，分别用于指定运行的主机和JIAJIA系统的配置。
-    同时在JIAJIA系统运行时，每台主机会根据在.jiahosts中的序号拥有自己唯一的jia\_pid.
+    同时在JIAJIA系统运行时，每台主机会根据在.jiahosts中的序号拥有自己唯一的jia\_pid。
 
     \subsection{系统操作}\label{sec:init}
     系统操作接口包含 jia\_init 和 jia\_exit 两个必要接口。jia\_init 用于完成系统的初始化工作，将调用核心层中的初始化模块（图~\ref{fig:mjiajia-init}）。
@@ -64,7 +68,7 @@ int jia_recv(char *buf, int len, int frompid, int tag);
     用于保证 JIAJIA系统访问共享变量的一致性以及操作的同步性。
 
     \subsection{消息传递接口}
-    消息传递接口用于分布式编程中节点之间的显式通信，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv 。
+    消息传递接口用于分布式编程中节点之间的显式通信，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv。
     jia\_send 用于向特定主机发送指定数据，而 jia\_recv 负责接收来自其他主机的消息，
     在通信层可以使用 UDP ， IPoIB 或 RDMA 通信栈进行通信。
 
