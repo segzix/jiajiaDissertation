@@ -1,12 +1,10 @@
 \chapter{绪论}\label{chap:introduction}{
   \section{本文研究背景与意义}
   随着信息技术迅猛发展，计算密集型任务与数据密集型任务已成为人工智能、流媒体、大数据、云计算和科学计算等领域面临的双重挑战。
-  为应对这些挑战，并行系统架构在垂直扩展和水平扩展两个范式上不断发展。垂直扩展范式聚焦于单节点多核处理器（Multi-core CPUs）、
-  异构加速器（如GPGPU、FPGA）等的深度协同优化，通过指令级或线程级并行提升计算能力；水平扩展范式则依赖于大规模分布式集群系统，
-  结合松耦合任务调度与数据共享策略，实现跨节点的负载均衡与任务协作。
+  在这种要求下，大规模分布式集群系统被提出，要求应用多重并行编程模型，结合松耦合任务调度与数据共享策略，实现跨节点的负载均衡与任务协作。
 
   从并行编程的角度来看，这些范式基于以下并行模型：共享内存、消息传递和分
-  布式共享内存（见图\ref{fig:model}）。这三种模型在编程时分别具有如下特点：
+  布式共享内存。这三种模型在编程时分别具有如下特点：
   \begin{itemize}
     \item \textbf{共享内存模型}： 所有计算核心共享一块全局主存，并通过各自私有的高速缓存（cache）来存储数据副本以加速数据访问；
     \item \textbf{消息传递模型}： 消息传递模型赋予集群中各节点上的进程独立的虚拟地址空间，进程间通过显式的通信原语（如 Send/Recv）完成数据交换；
@@ -22,33 +20,30 @@
   然而，DSM 仍面临两个关键挑战：昂贵的跨节点通信时延开销以及分布式环境下数据一致性维护的复杂性代价。
 
   长期以来，由于这两个挑战以及单节点内多核处理器所展现的强大计算能力，分布式共享内存系统在大规模集群中的应用受到较大限制。
-  但随着高性能网络互连和远程内存访问（RDMA）技术的不断进步，为解决传统消息传递模型中显式数据分区和通信管理的复杂性提供了全新思路，
-  同时为构建低延迟、高可扩展性和高可靠性的分布式系统奠定了坚实基础，分布式共享内存系统在计算与存储领域潜力正在重新受到关注。
-  FaRM、Grappa、Argodsm、GAM、DRust 等基于 RDMA 高速网络的分布式共享内存系统层出不穷，它们通过低延迟、高带宽的远程内存访问，
-  实现了更高效的数据共享和协同计算。
-  这不仅有助于突破单节点内存容量的局限，还能在保证数据一致性的前提下，支持更大规模、更高并发的数据处理任务。
+  但随着高性能网络互连和远程内存访问（RDMA）技术的不断进步，为解决传统消息传递模型中显式数据分区和通信管理的复杂性提供了全新思路。
+  当今的分布式共享内存系统不仅有助于突破单节点内存容量的局限，还能在保证数据一致性的前提下，支持更大规模、更高并发的数据处理任务。
 
-  \begin{figure}[!htbp]
-    \centering
-    \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{Img/共享内存模型.drawio.pdf}
-      \caption{共享内存模型}
-      \label{fig:multi-core}
-    \end{subfigure}%
-    \hspace{1.5cm}
-    \begin{subfigure}[b]{0.35\textwidth}
-      \includegraphics[width=\textwidth]{Img/消息传递模型.drawio.pdf}
-      \caption{消息传递模型}
-      \label{fig:message-passing}
-    \end{subfigure}
-    \begin{subfigure}[b]{0.6\textwidth}
-      \includegraphics[width=\textwidth]{Img/分布式共享内存模型.drawio.pdf}
-      \caption{分布式共享内存模型}
-      \label{fig:dsm}
-    \end{subfigure}
-    \bicaption{并行编程模型}{Parallel programming model}
-    \label{fig:model}
-  \end{figure}
+  % \begin{figure}[!htbp]
+  %   \centering
+  %   \begin{subfigure}[b]{0.35\textwidth}
+  %     \includegraphics[width=\textwidth]{Img/共享内存模型.drawio.pdf}
+  %     \caption{共享内存模型}
+  %     \label{fig:multi-core}
+  %   \end{subfigure}%
+  %   \hspace{1.5cm}
+  %   \begin{subfigure}[b]{0.35\textwidth}
+  %     \includegraphics[width=\textwidth]{Img/消息传递模型.drawio.pdf}
+  %     \caption{消息传递模型}
+  %     \label{fig:message-passing}
+  %   \end{subfigure}
+  %   \begin{subfigure}[b]{0.6\textwidth}
+  %     \includegraphics[width=\textwidth]{Img/分布式共享内存模型.drawio.pdf}
+  %     \caption{分布式共享内存模型}
+  %     \label{fig:dsm}
+  %   \end{subfigure}
+  %   \bicaption{并行编程模型}{Parallel programming model}
+  %   \label{fig:model}
+  % \end{figure}
 
   本文基于国产软件分布式共享内存系统 JIAJIA\citep{huweiwu2001sma,huweiwu2024ca,1999huweiwuJIAJIA} 进行研究。
   JIAJIA 由胡伟武老师于 90 年代末设计，是我国首款自主研发的 SDSM 系统。
@@ -70,37 +65,37 @@
     \item 在不损害性能的前提下，尽可能增加系统易用性和灵活性。
   \end{itemize}
 
-  \subsection{软件分布式共享内存系统概述}
-  根据节点间内存访问的耦合程序、一致性协议实现层级以及典型应用场景，分布式共享内存系统可以分为紧耦合（Tightly-Coupled）与松耦合（Loosely-Coupled）两类。
-  \begin{itemize}
-    \item 紧耦合分布式共享内存系统以硬件为核心实现全局内存地址空间抽象，通常依赖于专用互连架构（如ccNUMA，NUCA）与定制缓存一致性协议（如MESI/MOESI）;
-    \item 松耦合分布式共享内存系统则是指在物理分散节点间构建逻辑统一的共享内存抽象的软件或轻量级硬件辅助实现（如表~\ref{tab:dsm-different-implementations}所示）。
-  \end{itemize}
+  % \subsection{软件分布式共享内存系统概述}
+  % 根据节点间内存访问的耦合程序、一致性协议实现层级以及典型应用场景，分布式共享内存系统可以分为紧耦合（Tightly-Coupled）与松耦合（Loosely-Coupled）两类。
+  % \begin{itemize}
+  %   \item 紧耦合分布式共享内存系统以硬件为核心实现全局内存地址空间抽象，通常依赖于专用互连架构（如ccNUMA，NUCA）与定制缓存一致性协议（如MESI/MOESI）;
+  %   \item 松耦合分布式共享内存系统则是指在物理分散节点间构建逻辑统一的共享内存抽象的软件或轻量级硬件辅助实现（如表~\ref{tab:dsm-different-implementations}所示）。
+  % \end{itemize}
 
-  \begin{table}[!htbp]
-    \bicaption{DSM的不同实现级别}{Different levels of DSM Implementation}% caption
-    \label{tab:dsm-different-implementations}
-    \centering
-    \footnotesize% fontsize
-    \setlength{\tabcolsep}{4pt}% column separation
-    \renewcommand{\arraystretch}{1.5}% row space 
-    \begin{tabular}{lcc}
-      \hline
-      DSM 实现级别 & 要求               & 示例                            \\
-      \hline
-      硬件       & 专用硬件（共享缓存、片上互连等） & ccNUMA、NUCA                   \\
-      系统软件     & 操作系统虚拟管理机制修改     & IVY、Munin等                    \\
-      运行时用户库   & 基础通信能力           & TreadMarks、JIAJIA、OpenSHMEM 等 \\
-      语言或语言扩展  & 编译器支持            & PGAS语言（UPC、UPC++），OpenMP等     \\
-      \hline
-    \end{tabular}
+  % \begin{table}[!htbp]
+  %   \bicaption{DSM的不同实现级别}{Different levels of DSM Implementation}% caption
+  %   \label{tab:dsm-different-implementations}
+  %   \centering
+  %   \footnotesize% fontsize
+  %   \setlength{\tabcolsep}{4pt}% column separation
+  %   \renewcommand{\arraystretch}{1.5}% row space 
+  %   \begin{tabular}{lcc}
+  %     \hline
+  %     DSM 实现级别 & 要求               & 示例                            \\
+  %     \hline
+  %     硬件       & 专用硬件（共享缓存、片上互连等） & ccNUMA、NUCA                   \\
+  %     系统软件     & 操作系统虚拟管理机制修改     & IVY、Munin等                    \\
+  %     运行时用户库   & 基础通信能力           & TreadMarks、JIAJIA、OpenSHMEM 等 \\
+  %     语言或语言扩展  & 编译器支持            & PGAS语言（UPC、UPC++），OpenMP等     \\
+  %     \hline
+  %   \end{tabular}
 
-    \vspace*{3ex}
+  %   \vspace*{3ex}
 
-    \begin{minipage}{\textwidth}% choose width suitably
-      \mdseries\par\setlength\hangindent{2\ccwd} 表注：这里并不是严格划分，一些 DSM 的实现可能涉及多个层级协同实现。
-    \end{minipage}
-  \end{table}
+  %   \begin{minipage}{\textwidth}% choose width suitably
+  %     \mdseries\par\setlength\hangindent{2\ccwd} 表注：这里并不是严格划分，一些 DSM 的实现可能涉及多个层级协同实现。
+  %   \end{minipage}
+  % \end{table}
 
   相比紧耦合分布式共享内存系统，属于松耦合范畴的软件 DSM 系统的实现较为灵活，
   可以在系统软件（操作系统或编译器）、运行时库、语言等多个层次实现，具体区分可参见~\ref{sec:implementations}小结内容。
@@ -166,22 +161,24 @@
 
   针对上述，本文的主要贡献有：
   \begin{enumerate}[leftmargin=1em, align=left]
-    \item 设计并实现了一个支持双通信栈（UDP+RDMA）的软件分布式共享内存系统 M-JIAJIA，充分利用RDMA新型网络技术的高带宽。
-    \item 采用多线程加速M-JIAJIA系统的通信速度，改变了JIAJIA传统的单线程信号驱动通信模型。
-    \item 设计并实现系统取页时的远程预取机制，降低通信次数，大大提升了具有强局部性的应用程序的性能。
+    \item 设计并实现了一个支持双通信栈（UDP+RDMA）的软件分布式共享内存系统 M-JIAJIA，充分利用RDMA新型网络技术的高带宽；
+    \item 采用多线程加速M-JIAJIA系统的通信速度，改变了JIAJIA传统的单线程信号驱动通信模型；
+    \item 设计并实现系统取页时的远程预取机制，降低通信次数，大大提升了具有强局部性的应用程序的性能；
     \item 深入分析了基于 \texttt{M-JIAJIA} 库的应用程序在各阶段的性能开销，并对 M-JIAJIA 与 OpenMPI 的关键接口进行了对比测试，为后续相关研究提供了重要的参考与支撑。
   \end{enumerate}
   % 4. 利用 \texttt{M-JIAJIA} 设计实现了 \texttt{jacobi} 迭代算法，可用来在集群上进行线性方程组和热度扩散计算。
   \section{本文组织结构}
-  第一章介绍了文章的研究背景和意义，回顾了软件 DSM 系统的发展历程以及现如今所面临的挑战与机遇，概述本文工作的研究内容和主要贡献；
+  第\ref{chap:introduction}章介绍了文章的研究背景和意义，回顾了软件 DSM 系统的发展历程以及现如今所面临的挑战与机遇，概述本文工作的研究内容和主要贡献；
 
-  第二章主要介绍工作所涉及的两个技术基础——软件分布式共享内存和RDMA，论述了软件 DSM 系统所涉及的关键技术以及软件 DSM 的系统设计，并介绍了 RDMA 技术的工作原理；
+  第\ref{chap:sdsm}章主要介绍工作所涉及的两个技术基础——软件分布式共享内存和RDMA，论述了软件 DSM 系统所涉及的关键技术以及软件 DSM 的系统设计，并介绍了 RDMA 技术的工作原理；
 
-  第三章主要介绍了M-JIAJIA的具体设计与实现；
+  第\ref{chap:JIAJIA}章主要介绍JIAJIA系统的相关设计，介绍了其基本的实现原理与一致性模型；
 
-  第四章具体介绍了M-JIAJIA 的 RDMA 通信栈的设计与实现；
+  第\ref{chap:MJIAJIA}章主要介绍了M-JIAJIA的具体设计与实现；
 
-  第五章主要介绍关于 M-JIAJIA 系统的性能分析与优化测试；
+  第\ref{chap:RDMA}章具体介绍了M-JIAJIA 的 RDMA 通信栈的设计与实现；
 
-  第六章对本文的工作进行了总结，并展望 M-JIAJIA 系统后续可能的应用和研究方向。
+  第\ref{chap:experiments}章主要介绍关于 M-JIAJIA 系统的性能分析与优化测试；
+
+  第\ref{chap:summary}章对本文的工作进行了总结，并展望 M-JIAJIA 系统后续可能的应用和研究方向。
 }

@@ -3,7 +3,7 @@
     M-JIAJIA 采用分层模块化设计，解耦通信层和系统核心模块层，两层之间通过消息队列进行通信。
     通信层支持 UDP 通信和 RDMA 通信两种方案，并采用多线程流水化技术优化通信效率。
 
-    \section{设计概览}\label{sec:设计概览}
+    \section{设计概览}\label{sec:MJIAJIA设计概览}
     \begin{figure}[!htbp]
         \centering
         \includegraphics[width=1.0\textwidth]{Img/MJIAJIA系统框架图.drawio.pdf}
@@ -48,13 +48,13 @@ int jia_recv(char *buf, int len, int frompid, int tag);
     同时在JIAJIA系统运行时，每台主机会根据在.jiahosts中的序号拥有自己唯一的jia\_pid。
 
     \subsection{系统操作}\label{sec:init}
-    系统操作接口包含 jia\_init 和 jia\_exit 两个必要接口。jia\_init 用于完成系统的初始化工作，将调用核心层中的初始化模块（图~\ref{fig:mjiajia-init}）。
-    \begin{figure}[!htbp]
-        \centering
-        \includegraphics[width=0.6\textwidth]{Img/M-JIAJIA-初始化模块.drawio.pdf}
-        \bicaption{M-JIAJIA 初始化模块}{M-JIAJIA initial module}
-        \label{fig:mjiajia-init}
-    \end{figure}
+    系统操作接口包含 jia\_init 和 jia\_exit 两个必要接口。jia\_init 用于完成系统的初始化工作，将调用核心层中的初始化模块。
+    % \begin{figure}[!htbp]
+    %     \centering
+    %     \includegraphics[width=0.6\textwidth]{Img/M-JIAJIA-初始化模块.drawio.pdf}
+    %     \bicaption{M-JIAJIA 初始化模块}{M-JIAJIA initial module}
+    %     \label{fig:mjiajia-init}
+    % \end{figure}
     相比于 JIAJIA 的初始化模块，M-JIAJIA 做了如下架构改进以满足系统的灵活和可维护性要求：
     \begin{itemize}
         \item 重构配置文件解析逻辑，只依赖 .jiahosts 文件中提供的IP地址、用户名和密码三元组，计算节点之间的连通性由开发者保证。
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 
               通过以上设计，M-JIAJIA 相比 JIAJIA将端口占用复杂度从 $O(N^2)$ 降到 $O(N)$。
 
-              如图~\ref{fig:mjiajia-port-design}所示，图中红线是消息通路，蓝线是Ack通路，采用上述端口设计的host0 和 host2 之间一次通信将执行如下流程：
+              如图~\ref{fig:mjiajia-port-design}所示，图中红线是消息通路，蓝线是Ack通路。
               \begin{itemize}
                   \item host0 通过 snd\_port 发送消息至 host2 的 port 0 接口端口;
                   \item host2 利用 port 0 作为发送 Ack 端口发送 Ack 至 host0 的 ack\_port。
@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
     \end{enumerate}
 
     \subsubsection{RDMA 通信栈设计}
-    RDMA 通信模块包含 RDMA 通信栈的设计与实现，这部分将在第~\ref{chap:RJIAJIA}章节介绍。
+    RDMA 通信模块包含 RDMA 通信栈的设计与实现，这部分将在第~\ref{chap:RDMA}章节介绍。
 
     \subsection{远程预取优化}
     对于软件 DSM 系统而言，远程内存访问开销是通信开销的重要组成部分，也是影响系统性能的关键因素之一。
@@ -319,7 +319,7 @@ int main(int argc, char **argv) {
     \end{itemize}
 
     \section{本章小结}
-    本章 \ref{sec:设计概览}节给出 M-JIAJIA 系统的整体框架图，简要介绍了其基本层次结构。
+    本章 \ref{sec:MJIAJIA设计概览}节给出 M-JIAJIA 系统的整体框架图，简要介绍了其基本层次结构。
 
     本章 \ref{sec:函数接口设计} 节主要介绍 M-JIAJIA 的函数接口。包括配置文件，系统的基本操作和使用说明。
 

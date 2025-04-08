@@ -27,24 +27,24 @@
               与传统 DSM 系统的区别在于显式远程数据访问，程序员需明确指定数据来源。实现上依赖编译器和通信中间件层（如 GASNet~\citep{Bonachea2018GASNetEX}）支持。
     \end{itemize}
 
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.3\textwidth]{Img/GASNet.drawio.pdf}
-        \bicaption{\enspace GASNet 层系统图}{\enspace GASNet layer disgram}
-        \label{fig:GASNET}
-    \end{figure}
+    % \begin{figure}
+    %     \centering
+    %     \includegraphics[width=0.3\textwidth]{Img/GASNet.drawio.pdf}
+    %     \bicaption{\enspace GASNet 层系统图}{\enspace GASNet layer disgram}
+    %     \label{fig:GASNET}
+    % \end{figure}
 
-    \subsection{通信机制}
-    软件 DSM 系统依赖底层的消息传递机制来实现上层的虚拟共享抽象。不同网络环境和协议实现的消息传递机制在通信流程和开销上展现出显著差异。
+    % \subsection{通信机制}
+    % 软件 DSM 系统依赖底层的消息传递机制来实现上层的虚拟共享抽象。不同网络环境和协议实现的消息传递机制在通信流程和开销上展现出显著差异。
 
-    \begin{enumerate}
-        \item 为了追求更高的性能和可扩展性，传统 DSM 系统通常更倾向于采用低延迟的 UDP。
-              在此基础上，可以分为由SIGIO信号驱动的单线程模型，和采用划分通信任务的多线程模型；
-        \item RDMA 网络为现代软件 DSM 系统通信提供性能优势。在UDP的基础上，高带宽、低延迟的特性极大的降低了通信传输延迟；
-    \end{enumerate}
+    % \begin{enumerate}
+    %     \item 为了追求更高的性能和可扩展性，传统 DSM 系统通常更倾向于采用低延迟的 UDP。
+    %           在此基础上，可以分为由SIGIO信号驱动的单线程模型，和采用划分通信任务的多线程模型；
+    %     \item RDMA 网络为现代软件 DSM 系统通信提供性能优势。在UDP的基础上，高带宽、低延迟的特性极大的降低了通信传输延迟；
+    % \end{enumerate}
 
     \subsection{内存一致性模型}
-    内存一致性模型本质上是内存系统与并行程序之间的约定，它限制了系统可以执行内存访问的顺序。不同的内存一致性模型对访问顺序施加的限制的强弱程度不同，具体选择取决于对系统的性能要求和编程复杂度的权衡。维护内存一致性是软件 DSM 系统的关键问题，核心在于何时以及如何传播对共享内存的更新。
+    内存一致性模型限制了系统可以执行内存访问的顺序。维护内存一致性是软件 DSM 系统的关键问题，核心在于何时以及如何传播对共享内存的更新。
 
     \begin{itemize}
         \item \textbf{严格一致性模型(Strict Consistency)：} 严格一致性模型要求任何一次读操作总是返回最近一次对相同对象的写入结果，实现需要全局时钟同步和零通信延迟的理想条件。
@@ -127,16 +127,15 @@
 
     \textbf{RDMA通信模式}
 
-    RDMA 使用 QPs 作为通信基本单元行通信，QPs 的类型决定了 RDMA 通信链路的模式。见图~\ref{fig:rdma-queue-pairs}。
-    QPs 的类型可以根据是否建立连接以及是否可靠来划分。因此 RDMA 相应的支持四种通信链路模式即四种类型的 QPs，分别是：
+    RDMA 支持四种通信链路模式，分别是：
     可靠连接（RC）、不可靠连接（UC）、不可靠数据报（UD）、可靠数据报（RD）。这四种模式的通信特点如下：
 
-    \begin{figure}[!htbp]
-        \centering
-        \includegraphics[width=\linewidth]{Img/RDMA队列对.drawio.pdf}
-        \bicaption{\enspace RDMA 队列对}{\enspace RDMA Queue Pairs}
-        \label{fig:rdma-queue-pairs}
-    \end{figure}
+    % \begin{figure}[!htbp]
+    %     \centering
+    %     \includegraphics[width=\linewidth]{Img/RDMA队列对.drawio.pdf}
+    %     \bicaption{\enspace RDMA 队列对}{\enspace RDMA Queue Pairs}
+    %     \label{fig:rdma-queue-pairs}
+    % \end{figure}
 
     \begin{itemize}
         \item \textbf{RC 模式}： RC 模式采用面向连接的方式，提供可靠且有序的传输服务。
@@ -146,7 +145,6 @@
               高性能计算 ~\citep{graham2005OpenMPI, Huang2006MVAPICH2} 以及分布式事务系统 ~\citep{xingda2018DrTM+H} 等领域；
         \item \textbf{UC 模式}：UC 模式可视为 RC 模式的子集，面向连接但提供不可靠的传输服务(即不提供 Ack/Nak响应机制，不保证消息被对端成功接收），
               适用于对可靠性要求较低但对性能要求较高的场景，例如某些对实时性要求较高的视频应用；
-              此外，在具备强大容错机制的分布式系统中 ~\citep{kalia2014herd}，UC 模式相比于 RC 模式可减少网络间通信流量，提升数据传输效率。
         \item \textbf{RD 模式}：目前尚未有硬件支持 RD 模式，因此该模式尚未在实际应用中得到推广；
         \item \textbf{UD 模式}：UD 模式提供不可靠的数据报服务，无需建立连接，单个 QP 即可通过单播、多播或广播与其他 UD QPs 进行通信，
               但最大消息大小受 MTU 限制。适用于对可靠性要求较低或在应用层实现可靠性、规模较大且需要多播的应用场景~\citep{kalia2014herd,kalia2016fasst}。
@@ -159,7 +157,7 @@
     \begin{itemize}
         \item \textbf{双向动词}： 双向动词又称为消息语义，包含 SEND 和 RECV ，适合传输控制消息，需要远端 CPU 参与提前下发接收请求，类似于传统的消息传递模型；
         \item \textbf{单向动词}： 单向动词又称为内存语义，包含 RDMA Read 、RDMA Write 和 RDMA 原子操作（Fetch-and-Add/FAA，Compare-and-Swap/CAS）；
-              RDMA 原子操作适合需要强一致性保证和低延迟并发控制的场景，RDMA Read 和 RDMA Write 适合大量数据传输，可以绕过远端CPU，直接读取或写入指定的内存位置。
+              RDMA 原子操作适合需要强一致性保证和低延迟并发控制的场景，RDMA Read 和 RDMA Write 可以绕过远端CPU，将大量数据直接读取或写入指定的内存位置。
     \end{itemize}
 
     表~\ref{tab:mode-verbs}展示了 RDMA 通信模式和通信原语的支持关系。
@@ -184,91 +182,82 @@
         \label{tab:mode-verbs}
     \end{table}
 
+    \newpage
     \subsection{RDMA 通信流程}\label{sec:process}
-    不同的 RDMA Verbs 在通信时有不同的执行的流程，以下是对几种常见 Verbs 通信流程的介绍。
+    不同的 RDMA Verbs 在通信时有不同的执行的流程(大体流程及底层硬件流程见图~\ref{fig:rdma-Read})，以下是对几种常见 Verbs 通信流程的介绍。
+
+    \begin{figure}[!htbp]
+        \centering
+        \includegraphics[width=\linewidth]{Img/RDMA-Read通信流程图.drawio.pdf}
+        \bicaption{\enspace RDMA 通信流程图}{\enspace RDMA Read Communication Flow Diagram}
+        \label{fig:rdma-Read}
+    \end{figure}
+
     \begin{enumerate}[label=\arabic*.]
-        \item \textbf{Send/Recv 通信流程}
-
-              \begin{figure}[!htbp]
-                  \centering
-                  \includegraphics[width=\linewidth]{Img/RDMA-send_recv通信流程图.drawio.pdf}
-                  \bicaption{\enspace Send/Recv 通信流程图}{\enspace Send/Recv Communication Flow Diagram}
-                  \label{fig:rdma-send}
-                  {\small Note: 不同 RDMA 实现对于通信硬件设备有不同的名称，本文统称为 RDMA 网卡}
-              \end{figure}
-              图~\ref{fig:rdma-send}显示了左侧应用A尝试利用 Send 向远程应用 B 发送数据（其中省略了RDMA 网卡访存的操作）的流程。为了实现这一通信，将执行如下步骤：
-              \begin{itemize}
-                  \item 应用 B 向 RQ 下发接收工作请求，指定了 RDMA 网卡接收数据的具体内存位置。
-                  \item 应用 A 向 SQ 中下发发送工作请求，
-                        本地网卡将根据 SQE 从应用 A 的内存取出数据并发往远端。
-                  \item 远端 RDMA 网卡接收到数据后根据指定的位置将数据放入应用 B 的相应内存中。
-                  \item 网卡将请求的执行状态放入 CQ 中，应用可通过轮询得到上一个请求的结果。
-              \end{itemize}
-
-              从上述流程中可以看出，不同于Read/Write操作，Send/Recv 操作需要接收方 CPU 的参与。
 
         \item \textbf{RDMA Read 通信流程}
-              \begin{figure}[!htbp]
-                  \centering
-                  \includegraphics[width=\linewidth]{Img/RDMA-Read通信流程图.drawio.pdf}
-                  \bicaption{\enspace RDMA Read 通信流程图}{\enspace RDMA Read Communication Flow Diagram}
-                  \label{fig:rdma-Read}
-              \end{figure}
 
               RDMA Read 用于直接读取远端内存。如~\ref{fig:rdma-Read}所示，其执行流程如下：
-              \begin{itemize}
+              \begin{enumerate}
                   \item 应用 A 向 SQ 中下发WQE，本地网卡根据 SQ 中的 WQE 向远端发送读取请求包。
                   \item 远端网卡接收到读取请求包后，根据包中携带的信息，读取应用 B 相应位置的内存，并发回数据。
                   \item 本地网卡接收到数据，根据 WQE 的信息将数据存入应用 A 的内存，并向 CQ 中存入CQE。
                   \item 应用通过轮询 CQ 获得 CQE，从中获取上一个请求的完成情况。
-              \end{itemize}
+              \end{enumerate}
 
         \item \textbf{RDMA Write 通信流程}
-              \begin{figure}[!htbp]
-                  \centering
-                  \includegraphics[width=\linewidth]{Img/RDMA-Write通信流程图.pdf}
-                  \bicaption{\enspace RDMA Write 通信流程图}{\enspace RDMA Write Communication Flow Diagram}
-                  \label{fig:rdma-Write}
-              \end{figure}
 
-              RDMA Write 用于直接写入远端内存。如~\ref{fig:rdma-Write}所示，其执行流程如下：
-              \begin{itemize}
+              RDMA Write 用于直接写入远端内存，其执行流程如下：
+              \begin{enumerate}
                   \item 应用 A 向 SQ 中下发WQE，本地网卡根据 SQ 中的 WQE 中的提示读取本地内存，组装数据包发往远端。
                   \item 远端网卡收到数据包后解析得到数据目的地址，将数据写入相应位置后返回 ACK 。
                   \item 本地网卡根据返回的 ACK 信息生成 CQE，并将其放入 CQ。
                   \item 应用通过轮询 CQ 获得 CQE，从中获取上一个请求的完成情况。
-              \end{itemize}
+              \end{enumerate}
+
+        \item \textbf{Send/Recv 通信流程}
+
+              RDMA send recv负责两主机写作进行消息的发送与接收，其执行流程如下：
+              \begin{enumerate}
+                  \item 应用 B 向 RQ 下发接收工作请求，指定 RDMA 网卡接收数据的具体内存位置。
+                  \item 应用 A 向 SQ 中下发发送工作请求，
+                        本地网卡将根据 SQE 从应用 A 的内存取出数据并发往远端。
+                  \item 远端 RDMA 网卡接收到数据后根据指定的位置将数据放入应用 B 的相应内存中。
+                  \item 网卡将请求的执行状态放入 CQ 中，应用可通过轮询得到上一个请求的结果。
+              \end{enumerate}
+
+              从上述流程中可以看出，不同于Read/Write操作，Send/Recv 操作需要接收方 CPU 的参与。
     \end{enumerate}
 
-    相比于RDMA Read， Send/Recv 和 RDMA Write 不需要网卡发回数据包，因此在传输小数据报时，
-    RDMA Write 和 Send/Recv 的传输延迟大约是 RDMA Read 的一半~\citep{kalia2014herd}（见图~\ref{fig:RDMA-Verbs-Latency}）。
-    \begin{figure}[!htbp]
-        \centering
-        \includegraphics[width=\linewidth]{Img/verbs-latency.png}
-        \bicaption{\enspace RDMA Verbs 通信延迟比较}{\enspace Comparison of Communication Latency of RDMA Verbs}
-        {\small Note: 在Mellanox ConnectX-3 Pro 网卡可靠连接下的测试}
-        \label{fig:RDMA-Verbs-Latency}
-    \end{figure}
+    % 相比于RDMA Read， Send/Recv 和 RDMA Write 不需要网卡发回数据包，因此在传输小数据报时，
+    % RDMA Write 和 Send/Recv 的传输延迟大约是 RDMA Read 的一半~\citep{kalia2014herd}（见图~\ref{fig:RDMA-Verbs-Latency}）。
+    % \begin{figure}[!htbp]
+    %     \centering
+    %     \includegraphics[width=\linewidth]{Img/verbs-latency.png}
+    %     \bicaption{\enspace RDMA Verbs 通信延迟比较}{\enspace Comparison of Communication Latency of RDMA Verbs}
+    %     {\small Note: 在Mellanox ConnectX-3 Pro 网卡可靠连接下的测试}
+    %     \label{fig:RDMA-Verbs-Latency}
+    % \end{figure}
 
-    \subsection{RDMA 通信 vs Socket 通信}
+    \subsection{RDMA 通信建连销毁流程}
 
-    在传统通信模式中，主要有三种通信方式：
-    \begin{enumerate}
-        \item 基于TCP协议的流式套接字（stream socket）
-        \item 基于UDP协议的数据报套接字（datagram socket）
-        \item 绕过传输层的原始套接字（raw socket）
-    \end{enumerate}
+    % 在传统通信模式中，主要有三种通信方式：
+    % \begin{enumerate}
+    %     \item 基于TCP协议的流式套接字（stream socket）
+    %     \item 基于UDP协议的数据报套接字（datagram socket）
+    %     \item 绕过传输层的原始套接字（raw socket）
+    % \end{enumerate}
 
-    见图~\ref{fig:Socket-Type}。
-    在传统网络编程实践中，传输层协议的选择不仅决定socket的类型，还深刻影响整个通信子系统的设计，主要体现在连接管理、数据传输、错误处理等方面。
-    \begin{figure}[!htbp]
-        \centering
-        \includegraphics[width=0.35\linewidth]{Img/三种socket类型.drawio.pdf}
-        \bicaption{\enspace 三种 Socket 类型}{\enspace The Three Socket Types}
-        \label{fig:Socket-Type}
-    \end{figure}
+    % 见图~\ref{fig:Socket-Type}。
+    % 在传统网络编程实践中，传输层协议的选择不仅决定socket的类型，还深刻影响整个通信子系统的设计，主要体现在连接管理、数据传输、错误处理等方面。
+    % \begin{figure}[!htbp]
+    %     \centering
+    %     \includegraphics[width=0.35\linewidth]{Img/三种socket类型.drawio.pdf}
+    %     \bicaption{\enspace 三种 Socket 类型}{\enspace The Three Socket Types}
+    %     \label{fig:Socket-Type}
+    % \end{figure}
 
-    相比socket通信，RDMA 通信需要开发者深入了解底层网络协议与硬件特性。通信流程如下（以可靠连接为例）：
+    % 相比socket通信，RDMA 通信需要开发者深入了解底层网络协议与硬件特性。通信流程如下（以可靠连接为例）：
     \begin{enumerate}[label=\textbf{步骤 \arabic*.}, leftmargin=0.5cm, align=left]
         \item \textbf{RDMA建立连接}
               \begin{itemize}
@@ -287,14 +276,6 @@
 
               逆序销毁队列对、完成队列、内存区域等对象，释放保护域并关闭设备。
     \end{enumerate}
-
-    图~\ref{fig:RDMA-structs}展示了利用通信基础库 libibverbs 和 librdmacm 库核心数据结构之间的引用关系。在创建一个数据结构之前，需要首先完成其引用数据结构的创建。
-    \begin{figure}[!htbp]
-        \centering
-        \includegraphics[width=\linewidth]{Img/RDMA关键数据结构.drawio.pdf}
-        \bicaption{\enspace RDMA 关键数据结构引用关系图}{\enspace The RDMA key data structure reference relationship diagram}
-        \label{fig:RDMA-structs}
-    \end{figure}
 
     \section{本章小结}
 
