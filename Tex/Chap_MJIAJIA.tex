@@ -14,38 +14,34 @@
     其中应用层主要包含了 M-JIAJIA 系统的并行测试程序（将在~\ref{chap:experiments}章节做进一步介绍）。
     本章节剩余部分将主要介绍接口层、核心模块层、通信层的设计与实现。
 
-    \section{函数接口设计}\label{sec:函数接口设计}
-    M-JIAJIA 在函数接口设计上保持了对 JIAJIA 系统接口的兼容，提供列表~\ref{lst:jia-interface}所示 C 语言的编程接口。主要包括全局变量、系统操作、内存操作、同步操作、消息传递接口、和 RDMA（远程内存访问） 接口等。
-    \begin{lstlisting}[style=CStyle, caption={M-JIAJIA C 接口总览}, label={lst:jia-interface}]
-/* 全局变量 */
-extern int jiahosts;
-extern int jiapid;
-/* 系统操作 */
-void jia_init(int argc, int argv);
-void jia_exit();
-/* 内存操作 */
-unsigned long jia_alloc(int totalsize);
-unsigned long jia_alloc2(int totalsize, int blocksize);
-unsigned long jia_alloc2p(int totalsize, int starthost);
-unsigned long jia_alloc3(int totalsize, int blocksize, int starthost);
-unsigned long jia_alloc4(int totalsize, int *blocks, int n, int starthost);
-unsigned long jia_alloc_random(int totalsize);
-unsigned long jia_alloc_array(int totalsize, int *array, int n);
-void jia_free(void *addr);
-/* 同步操作 */
-void jia_lock(int lockid);
-void jia_unlock(int lockid);
-void jia_barrier();
-void jia_wait();
-/* 消息传递接口 */
-void jia_send(char *buf, int len, int topid, int tag);
-int jia_recv(char *buf, int len, int frompid, int tag);
-    \end{lstlisting}
-
-    \subsection{配置文件}
-    M-JIAJIA 程序采用单程序多数据（Single Program Multiple Data, SPMD）并行计算模式，运行时系统将同一程序动态部署到分布式计算节点上协同执行。
-    系统向开发者提供两个配置文件：.jiahosts 和 .jiaconfig，分别用于指定运行的主机和JIAJIA系统的配置。
-    同时在JIAJIA系统运行时，每台主机会根据在.jiahosts中的序号拥有自己唯一的jia\_pid。
+    \section{M-JIAJIA架构}\label{sec:函数接口设计}
+    M-JIAJIA 在整体架构设计上保持了与 JIAJIA 系统的一致，
+    主要改动体现在系统操作、同步操作、消息传递接口和核心模块设计等。
+    %     \begin{lstlisting}[style=CStyle, caption={M-JIAJIA C 接口总览}, label={lst:jia-interface}]
+    % /* 全局变量 */
+    % extern int jiahosts;
+    % extern int jiapid;
+    % /* 系统操作 */
+    % void jia_init(int argc, int argv);
+    % void jia_exit();
+    % /* 内存操作 */
+    % unsigned long jia_alloc(int totalsize);
+    % unsigned long jia_alloc2(int totalsize, int blocksize);
+    % unsigned long jia_alloc2p(int totalsize, int starthost);
+    % unsigned long jia_alloc3(int totalsize, int blocksize, int starthost);
+    % unsigned long jia_alloc4(int totalsize, int *blocks, int n, int starthost);
+    % unsigned long jia_alloc_random(int totalsize);
+    % unsigned long jia_alloc_array(int totalsize, int *array, int n);
+    % void jia_free(void *addr);
+    % /* 同步操作 */
+    % void jia_lock(int lockid);
+    % void jia_unlock(int lockid);
+    % void jia_barrier();
+    % void jia_wait();
+    % /* 消息传递接口 */
+    % void jia_send(char *buf, int len, int topid, int tag);
+    % int jia_recv(char *buf, int len, int frompid, int tag);
+    %     \end{lstlisting}
 
     \subsection{系统操作}\label{sec:init}
     系统操作接口包含 jia\_init 和 jia\_exit 两个必要接口。jia\_init 用于完成系统的初始化工作，将调用核心层中的初始化模块。
@@ -64,42 +60,42 @@ int jia_recv(char *buf, int len, int frompid, int tag);
 
     jia\_exit 用于收集所有远程节点的统计信息，并在释放系统资源后退出。
     \subsection{同步操作}
-    M-JIAJIA 提供两种同步原语 jia\_lock 和 jia\_barrier 和一种等待原语 jia\_wait，
-    用于保证 JIAJIA系统访问共享变量的一致性以及操作的同步性。
+    M-JIAJIA 提供两种同步原语 jia\_lock 和 jia\_barrier 和一种等待原语 jia\_wait，与JIAJIA系统保持一致。
+    相比与JIAJIA的改动体现在采用多线程进行多主机同步操作，使用原子操作与信号量等同步原语来保证线程间的同步一致性。
 
     \subsection{消息传递接口}
-    消息传递接口用于分布式编程中节点之间的显式通信，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv。
+    消息传递接口用于分布式编程中节点之间的显式通信。相比与JIAJIA系统，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv。
     jia\_send 用于向特定主机发送指定数据，而 jia\_recv 负责接收来自其他主机的消息，
     在通信层可以使用 UDP ， IPoIB 或 RDMA 通信栈进行通信。
 
-    \newpage
-    \subsection{模板与使用说明}
-    接口层的介绍将以一个 M-JIAJIA 的模板结束，如列表~\ref{lst:jia-template}所示。利用 M-JIAJIA 接口编程存在两个基本注意点：
-    \begin{itemize}
-        \item 所有程序均需要以 jia\_init 和 jia\_exit 完成系统的初始化和退出。
-        \item 除消息传递接口，锁同步操作外，所有其他接口必须全局执行，不可依赖条件语句。
-    \end{itemize}
-    \begin{lstlisting}[style=CStyle, caption={M-JIAJIA 应用模板}, label={lst:jia-template}]
-#include <jia.h>
-int main(int argc, char **argv) {
-    jia_init(argc, argv);   // 系统初始化
+    %     \newpage
+    %     \subsection{模板与使用说明}
+    %     接口层的介绍将以一个 M-JIAJIA 的模板结束，如列表~\ref{lst:jia-template}所示。利用 M-JIAJIA 接口编程存在两个基本注意点：
+    %     \begin{itemize}
+    %         \item 所有程序均需要以 jia\_init 和 jia\_exit 完成系统的初始化和退出。
+    %         \item 除消息传递接口，锁同步操作外，所有其他接口必须全局执行，不可依赖条件语句。
+    %     \end{itemize}
+    %     \begin{lstlisting}[style=CStyle, caption={M-JIAJIA 应用模板}, label={lst:jia-template}]
+    % #include <jia.h>
+    % int main(int argc, char **argv) {
+    %     jia_init(argc, argv);   // 系统初始化
 
-    jia_alloc(size);
-    
-    ...  // 共享内存初始化操作
+    %     jia_alloc(size);
 
-    jia_barrier();  // 同步操作    
+    %     ...  // 共享内存初始化操作
 
-    jia_lock(lockid);
-    // 临界区操作
-    jia_unlock(lockid);
-    
-    jia_exit(); // 系统退出
-    return 0;
-}
-    \end{lstlisting}
+    %     jia_barrier();  // 同步操作    
 
-    \section{核心模块设计}\label{sec:核心模块设计}
+    %     jia_lock(lockid);
+    %     // 临界区操作
+    %     jia_unlock(lockid);
+
+    %     jia_exit(); // 系统退出
+    %     return 0;
+    % }
+    %     \end{lstlisting}
+
+    \subsection{核心模块设计}
     核心模块层主要由系统的核心处理逻辑组成，负责管理关键数据结构。
     M-JIAJIA的核心模块与JIAJIA基本类似，增加了一个RDMA通信管理模块负责记录网卡参数、
     分配的网卡资源以及连接相关的参数和资源等信息，来进行RDMA通信。
@@ -163,7 +159,7 @@ int main(int argc, char **argv) {
               该架构将通信任务划分为发送、接收和处理三个子任务，并为每个子任务分配独立线程执行，以提高并发效率。
               \begin{figure}[H]
                   \centering
-                  \includegraphics[width=1.0\textwidth]{Img/多线程架构设计.drawio.pdf}
+                  \includegraphics[width=1.0\textwidth]{Img/comm_thread_work.drawio.pdf}
                   \bicaption{\enspace 多线程架构设计}{\enspace Multithread architecture design}
                   \label{fig:mjiajia-multithread}
               \end{figure}
@@ -178,6 +174,12 @@ int main(int argc, char **argv) {
 
               \textbf{发送线程}： 发送线程主要负责检测输出队列是否有待发送的消息，并监听Ack确定消息发送是否成功或需要重传。伪代码如算法~\ref{alg:client-thread} 所示：
 
+              发送线程发送消息主要分为以下几个步骤：
+              \begin{enumerate}
+                  \item 用信号量进行同步，从outqueue中取出消息；
+                  \item 调用outsend函数发送消息，并根据ack的回复判断是否需要重传；
+                  \item snd\_seq++记录发送消息的序号。
+              \end{enumerate}
               \begin{algorithm}[H]
                   \caption{client thread algorithm}\label{alg:client-thread}
                   \begin{algorithmic}[1] % [1] 使得每行都有行号
@@ -220,6 +222,13 @@ int main(int argc, char **argv) {
 
               \textbf{侦听线程}：侦听线程负责监视多个接收文件描述符，从就绪的文件描述符中接收消息，将其放入队列，并返回确认消息（Ack）。伪代码如算法~\ref{alg:listen-thread}所示。
 
+              侦听线程发送消息主要分为以下几个步骤：
+              \begin{enumerate}
+                  \item 将文件描述符加入epollfd中进行监听；
+                  \item 监听到文件描述符的消息后调用recvfrom函数接收消息；
+                  \item 成功接收消息并放入inqueue队列后后返回ack给发送主机，并rcv\_seq++记录接收消息的序号。
+              \end{enumerate}
+
               \begin{algorithm}[H]
                   \caption{listen thread algorithm}\label{alg:listen-thread}
                   \begin{algorithmic}[1] % [1] 使得每行都有行号
@@ -252,6 +261,12 @@ int main(int argc, char **argv) {
               \end{algorithm}
 
               \textbf{服务线程}：服务线程负责从输入队列中提取消息，并根据消息类型进行相应的服务。伪代码如算法~\ref{alg:server-thread} 所示。
+
+              服务线程发送消息主要分为以下几个步骤：
+              \begin{enumerate}
+                  \item 通过信号量同步从inqueue中取出消息；
+                  \item 调用msg\_handle函数处理消息。
+              \end{enumerate}
               \begin{algorithm}[H]
                   \caption{server thread algorithm}\label{alg:server-thread}
                   \begin{algorithmic}[1] % [1] 使得每行都有行号
@@ -278,7 +293,7 @@ int main(int argc, char **argv) {
               \textbf{超时重传机制}：发送线程在发送消息后进入阻塞状态，等待 Ack 消息。如果超时未收到 Ack，则触发重传机制。然而，对于不匹配的 Ack，系统仅忽略处理，不触发重传。
               \begin{figure}[H]
                   \centering
-                  \includegraphics[width=1\textwidth]{Img/M-JIAJIA 可靠通信实现.drawio.pdf}
+                  \includegraphics[width=0.8\textwidth]{Img/M-JIAJIA 可靠通信实现.drawio.pdf}
                   \bicaption{\enspace M-JIAJIA 可靠通信实现}{\enspace M-JIAJIA Reliable Communication Implementation}
                   \label{fig:mjiajia-reliable-comm}
               \end{figure}
@@ -297,18 +312,20 @@ int main(int argc, char **argv) {
 
     M-JIAJIA 的预取策略是在远程取页时，提前获取远端节点上分配的后续几页共享页，缓存至本地并赋予读权限，从而提升访问效率。
 
-    具体实现方案依赖于三个变量：预取开关（prefetch）、预取页数（prefetch\_pages）和最大检查页数（max\_checking\_pages）。预取的触发条件是：
-    $$
-        \left\{
-        \begin{aligned}
-             & \texttt{prefetch = on},           \\
-             & \texttt{prefetch\_pages > 0},     \\
-             & \texttt{max\_checking\_pages > 0}
-        \end{aligned}
-        \right.
-    $$
+    % 具体实现方案依赖于三个变量：预取开关（prefetch）、预取页数（prefetch\_pages）和最大检查页数（max\_checking\_pages）。预取的触发条件是：
+    % $$
+    %     \left\{
+    %     \begin{aligned}
+    %          & \texttt{prefetch = on},           \\
+    %          & \texttt{prefetch\_pages > 0},     \\
+    %          & \texttt{max\_checking\_pages > 0}
+    %     \end{aligned}
+    %     \right.
+    % $$
 
-    在启用预取的情况下，远端节点在接收到读取页请求后，将最多向后检查 max\_checking\_pages 相邻页是否是共享页，并至多打包 prefetch\_pages 页一同返回。预取优化的效果取决于两次消息传递获取写权限的模式出现的概率以及共享内存的分配策略。若采用循环页分配算法，使相邻页分配至不同节点，预取优化的效果将受到限制。
+    在启用预取的情况下，远端节点在接收到读取页请求后，根据指定的参数向后检查相邻页是否是共享页，
+    并打包相邻的共享页一同返回节点。预取优化的效果取决于两次消息传递获取写权限的模式出现的概率以及共享内存的分配策略。
+    若采用循环页分配算法，使相邻页分配至不同节点，预取优化的效果将受到限制。
 
 
     \subsection{其他优化}
@@ -321,9 +338,7 @@ int main(int argc, char **argv) {
     \section{本章小结}
     本章 \ref{sec:MJIAJIA设计概览}节给出 M-JIAJIA 系统的整体框架图，简要介绍了其基本层次结构。
 
-    本章 \ref{sec:函数接口设计} 节主要介绍 M-JIAJIA 的函数接口。包括配置文件，系统的基本操作和使用说明。
-
-    本章 \ref{sec:核心模块设计} 节介绍了 M-JIAJIA 的核心模块设计，相比JIAJIA增加了一个RDMA通信模块。
+    本章 \ref{sec:函数接口设计} 节主要介绍 M-JIAJIA 的基本架构。包括系统操作，同步操作，消息传递接口和核心模块设计。
 
     本章 \ref{sec:M-JIAJIA优化设计} 节介绍了 M-JIAJIA 相比JIAJIA的一些优化，包括通信栈优化，远程预取优化等。
 }

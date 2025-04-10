@@ -17,47 +17,54 @@
 \intobmk\chapter*{摘\quad 要}% 显示在书签但不显示在目录
 \setcounter{page}{1}% 开始页码
 \pagenumbering{Roman}% 页码符号
-软件分布式共享内存（SDSM）系统以软件库的形式在分布式系统上构建一个虚拟共享内存抽象层，为分布式应用开发提供类似多线程的编程范式。相较于消息传递模型，SDSM 提供的全局地址空间支持跨节点的透明内存访问，允许开发人员直接操作指针相关的复杂数据结构，显著降低了分布式程序的开发和调试复杂度。相较于紧耦合分布式共享内存系统，SDSM可以以低成本提供更大的共享内存空间。
 
-然而，传统 SDSM 系统长期受限于通信延迟问题。近年来，随着远程直接内存访问（RDMA）等高速网络技术的不断进步，跨节点访存和节点内访存的时延差距不断缩小，促使SDSM系统重新成为分布式计算和分布式存储领域的研究热点。
+软件分布式共享内存（SDSM）系统通过软件库在分布式系统上构建一个虚拟共享内存抽象层，为分布式应用开发提供类似于多线程的编程范式。
+与消息传递模型相比，SDSM 提供的全局地址空间支持透明的跨节点内存访问，
+使得开发人员能够直接操作指针相关的复杂数据结构，从而显著降低了分布式程序开发与调试的复杂性。
+此外，与紧耦合的分布式共享内存系统不同，SDSM 以较低的成本提供了更大的共享内存空间。
 
-本文在国产软件分布式共享内存系统 JIAJIA 工作的基础上，设计并实现了支持 UDP 和原生 RDMA 的双通信栈软件分布式共享内存系统 M-JIAJIA。并根据现代多核服务器的硬件特性以及多样化并行负载的资源需求差异，提出以下优化方案：
+然而，传统的 SDSM 系统长期受到通信延迟的限制。近年来，随着远程直接内存访问（RDMA）等高速网络技术的进步，
+跨节点访存和节点内访存的时延差距逐渐缩小，促使 SDSM 系统在分布式计算和分布式存储领域重新成为研究热点。
+
+基于国产软件分布式共享内存系统 JIAJIA，本文设计并实现了支持 UDP 和原生 RDMA 双通信栈的 M-JIAJIA 系统。
+并结合现代多核服务器的硬件特性和多样化并行负载的资源需求，提出了以下优化方案：
+
 \begin{enumerate}[label=\arabic*.]
-    \item \textbf{通信任务并行化}：引入多线程协同机制拆分通信流水线，实现无竞争消息的并行处理，充分利用多核计算资源；
-    \item \textbf{跨节点访存优化}：利用局部性原理设计远程预取机制，在远程取页时，预先取回相邻的页并给予受限制的权限，进一步降低了局部性强的应用的内存访问延迟；
-    \item \textbf{可定制架构}：整个系统采用分层设计原则，在保证性能的前提下，通过模块化结构提升系统易用性与可扩展性，支持通信协议、系统选项、优化技术等的灵活配置。
+    \item \textbf{网络技术优化}：引入RDMA网络技术，保证多主机之间高速的可靠通信，降低节点之间的通信开销；
+    \item \textbf{通信任务并行化}：引入多线程协同机制，将通信任务进行划分，保证硬件资源的充分利用；
+    \item \textbf{跨节点访存优化}：设计远程预取机制，在远程取页时预取相邻的页并赋予受限权限，进一步降低局部性强的应用的内存访问延迟；
+    \item \textbf{可定制架构}：系统将通信层与系统任务分离，在保证性能的同时，通过模块化结构提升系统的易用性与可扩展性，支持更灵活地对系统进行配置。
 \end{enumerate}
-%ep，is，lu，mm，jacobi，pi，sor，tsp
 
-M-JIAJIA 系统在多个并行测试框架上的应用程序（SPLASH-2：LU、Water；NAS：EP、IS），以及一些经典并行应用如矩阵相乘（MM）、圆周率计算（PI）、旅行商问题（TSP），方程求解（Jacobi，SOR）上进行了测试。实验结果表明，对于通信密集的程序TSP、MM、Water、LU、SOR，相比于传统以太网，在RDMA 网络下运行的程序性能提升了22\times -58\times。远程预取机制在传统以太网上提升局部性强的应用性能 MM(41\times)、LU(13\times)、SOR(12\times)，而在 RDMA 网络下，由于通信延迟较小，预取机制对性能影响并不明显。
+M-JIAJIA 系统在多个并行测试框架上的应用程序（如 SPLASH-2 中的 LU、Water；
+NAS 中的 EP、IS）以及经典并行应用（如矩阵乘法 MM、圆周率计算 PI、旅行商问题 TSP）和方程求解（Jacobi、SOR）上进行了测试。
+实验结果表明，在 RDMA 网络下，通信密集型程序（如 TSP、MM、Water、LU、SOR）的性能相较于传统以太网提升了 16\%-64\%。
+在传统以太网上，远程预取机制对局部性强的应用（如 MM：41\%，LU：13\%，SOR：12\%）有显著提升，
+而在 RDMA 网络下，由于通信延迟较低，预取机制对性能影响较小。
 
-\keywords{软件分布式共享内存系统, JIAJIA, 多线程, 远程直接内存访问}% 中文关键词
+\keywords{软件分布式共享内存, JIAJIA, 多线程, 远程直接内存访问}% 中文关键词
 %-
 %-> 英文摘要
 %-
 \intobmk\chapter*{Abstract}% 显示在书签但不显示在目录
-%- the current style, comment all the lines in plain style definition.
-Software Distributed Shared Memory (SDSM) systems construct a virtual shared memory abstraction layer over distributed systems through software libraries, providing a multithreaded-like programming paradigm for distributed application development. Compared to message-passing models, SDSM offers a global address space that enables transparent cross-node memory access, allowing developers to directly manipulate complex pointer-based data structures, thereby significantly reducing the development and debugging complexity of distributed programs. Moreover, Unlike tightly coupled distributed shared memory systems, SDSM delivers a larger shared memory space at lower costs. However, traditional SDSM systems have long been constrained by communication latency issues. In recent years, advancements in high-speed networking technologies such as Remote Direct Memory Access (RDMA) have narrowed the gap between inter-node and intra-node communication, reigniting research interest in SDSM systems within the distributed computing field and distributed shared memory field.
 
-Building upon the domestic SDSM system JIAJIA, this paper designs and implements M-JIAJIA, an enhanced SDSM system supporting dual communication stacks (UDP and native RDMA). To leverage modern multi-core server architectures and accommodate the heterogeneous resource demands of diverse parallel workloads, the following optimizations are proposed:
+Software Distributed Shared Memory (SDSM) systems create a virtual shared memory abstraction layer over distributed systems through software libraries, providing a multithreaded-like programming model for distributed application development. Compared to message-passing models, SDSM enables transparent cross-node memory access through a global address space, allowing developers to directly manipulate complex pointer-based data structures. This significantly reduces the complexity of developing and debugging distributed applications. In contrast to tightly coupled distributed shared memory systems, SDSM offers a larger shared memory space at a lower cost.
 
-\begin{enumerate}[label=\arabic*.]{
-    \item Parallelization of Communication Tasks: A multi-threaded cooperative mechanism splits communication pipelines to enable data-race-free message processing, fully utilizing multi-core computational resources.
+However, traditional SDSM systems have been limited by communication latency. Recently, advances in high-speed networking technologies, such as Remote Direct Memory Access (RDMA), have narrowed the latency gap between inter-node and intra-node communication, making SDSM systems a research hotspot once again in the fields of distributed computing and distributed storage.
 
-    \item Cross-Node Memory Access Optimization: A locality-aware remote prefetching mechanism retrieves adjacent pages with restricted permissions during remote page fetches, effectively reducing memory access latency for applications with strong locality.
+Building on the domestic SDSM system JIAJIA, this paper designs and implements M-JIAJIA, an enhanced SDSM system supporting dual communication stacks (UDP and native RDMA). Leveraging modern multi-core server architectures and the diverse resource demands of parallel workloads, we propose the following optimizations:
 
-    \item Customizable Architecture: A layered design
-          ensures performance while enhancing usability and extensibility through modular components, supporting flexible configurations of communication protocols, system options, and optimization techniques.
-          }
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Network Technology Optimization}: Introduce RDMA network technology to ensure high-speed and reliable communication between multiple hosts, reducing communication overhead between nodes;
+    \item \textbf{Parallelization of Communication Tasks}: Introduce a multi-threaded coordination mechanism to partition communication tasks, ensuring efficient utilization of hardware resources;
+    \item \textbf{Cross-Node Memory Access Optimization}: Design a remote prefetching mechanism that prefetches adjacent pages with restricted permissions when fetching remote pages, further reducing memory access latency for locality-sensitive applications;
+    \item \textbf{Customizable Architecture}: The system separates the communication layer from system tasks, enhancing usability and scalability through a modular structure while maintaining performance, allowing for more flexible system configuration.
 \end{enumerate}
 
 
-The M-JIAJIA system was evaluated on multiple parallel benchmarks, including SPLASH-2 (LU, Water), NAS (EP, IS), and classical applications such as matrix multiplication (MM), Pi calculation, Traveling Salesman Problem (TSP), and equation solvers (Jacobi, SOR). Experimental results demonstrate that communication-intensive applications (TSP, MM, Water, LU, SOR) achieve 22×–58× performance improvements on RDMA networks compared to traditional Ethernet. The prefetching mechanism enhances performance for locality-sensitive applications on Ethernet (MM: 41×, LU: 13×, SOR: 12×), while the gains is trivial under RDMA network environment due to lower communication latency.
-
+The M-JIAJIA system was evaluated on several parallel test frameworks, including SPLASH-2 (LU, Water), NAS (EP, IS), and classical applications such as matrix multiplication (MM), Pi calculation, Traveling Salesman Problem (TSP), and equation solvers (Jacobi, SOR). Experimental results demonstrate that communication-intensive applications (TSP, MM, Water, LU, SOR) achieve performance improvements of 16\%-64\% on RDMA networks compared to traditional Ethernet. The prefetching mechanism improves performance for locality-sensitive applications on Ethernet (MM: 41\%, LU: 13\%, SOR: 12\%), while its effect is minimal in the RDMA network environment due to lower communication latency.
 
 \KEYWORDS{SDSM, JIAJIA, Multithreading, RDMA}% 英文关键词
 
 \pagestyle{enfrontmatterstyle}%
-\cleardoublepage\pagestyle{frontmatterstyle}%
-
-%---------------------------------------------------------------------------%
+% \cleardoublepage\pagestyle{frontmatterstyle}%

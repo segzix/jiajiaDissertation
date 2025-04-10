@@ -15,10 +15,18 @@
 
     \section{未来研究方向}
 
+    未来研究工作将围绕以下几个方面展开：
+
     \begin{enumerate}
-        \item RDMA read write 原语的进一步实现；
-        \item jiajia对外接口扩展；
-        \item 开发基于jiajia的分布式内存数据库；
-        \item jiajia内存cache一致性模型的进一步扩展。
+        \item \textbf{RDMA原语深度优化}：进一步探索RDMA read/write原语在M-JIAJIA系统中的实现，探索原子操作等高级特性的集成方案，
+              提升跨节点内存访问效率，尽可能替代RDMA recv/send原语。
+
+        \item \textbf{系统接口扩展}：完善JIAJIA对外接口体系，增强开发者友好性，尽可能使JIAJIA成为一个可靠且能大规模部署的分布式共享内存系统。
+              同时建立标准化接口规范，提升系统可扩展性。
+
+        \item \textbf{分布式内存数据库构建}：基于JIAJIA构建高性能分布式内存数据库系统，充分利用RDMA网络的快速传输特性。
+
+        \item \textbf{一致性模型增强}：扩展JIAJIA内存一致性模型，支持多粒度cache一致性协议。
+              同时继续探索宿主迁移等适合JIAJIA系统性能优化的方案，尽可能免除不必要的通信，对通信瓶颈进行优化。
     \end{enumerate}
 }

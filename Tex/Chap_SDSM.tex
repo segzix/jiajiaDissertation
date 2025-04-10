@@ -82,7 +82,7 @@
         \item \textbf{急切更新释放一致性(Release Consistency)：} 释放一致性的核心思想是把弱一致性中的同步操作进一步划分为获取操作（acquire）和释放操作（release）。只在特定的释放操作时才传播对共享内存的更新以保证数据一致性，而不是在每次访问共享内存时都强制同步。
 
         \item \textbf{懒惰更新释放一致性(Lazy release Consistency)：} 懒惰更新释放一致性将更新传播的目的地范围限制为下一个获取锁的节点。这进一步减少了系统中通信消息的数量。
-              下图说明懒惰更新释放一致性与急切释放一致性的通信比较。
+              图~\ref{fig:oaspl}说明懒惰更新释放一致性与急切释放一致性的通信比较。
 
         \item \textbf{域一致性(Scope Consistency)：} 域一致性引入了一致性域（consistency scope）的概念，可以简单地将一致性域视为由锁保护的临界区。
               通过这一概念隐式地建立起共享内存对象与同步对象之间的关联，进而限制每次传播的共享内存对象更新的范围，有效降低了通信数据量。
@@ -91,22 +91,22 @@
     \end{itemize}
 
     \section{RDMA 技术介绍}\label{RDMA 技术介绍}
-    远程直接内存访问（Remote Direct Memory Access, RDMA）技术是一种应用于高性能计算领域的网络通信协议，支持远程直接读写异地内存，而无需双方操作系统甚至 CPU 的介入。
+    远程直接内存访问（Remote Direct Memory Access, RDMA）是一种广泛应用于高性能计算中的网络通信协议，它允许直接对远程内存进行读写操作，而无需依赖双方的操作系统或 CPU 的参与。
     如图~\ref{fig:DMA-RDMA}所示，RDMA 可视作直接内存访问（Direct Memory Access, DMA）在分布式系统上的扩展，把直接访问内存的范围从单机内存扩展到了远端内存。
     \begin{figure}[!htbp]
         \centering
-        \begin{subfigure}[b]{0.30\textwidth}
+        \begin{subfigure}[b]{0.50\textwidth}
             \includegraphics[width=\textwidth]{Img/TCP_IP通信.drawio.pdf}
             \caption{TCP/IP 通信}
             \label{fig:TCPIP}
         \end{subfigure}%
         ~~~~~% add desired spacing
-        \begin{subfigure}[b]{0.40\textwidth}
+        \begin{subfigure}[b]{0.50\textwidth}
             \includegraphics[width=\textwidth]{Img/RDMA通信.drawio.pdf}
             \caption{RDMA 通信}
             \label{fig:RDMA}
         \end{subfigure}
-        \bicaption{\enspace DMA 与 RDMA 的比较}{\enspace }
+        \bicaption{\enspace DMA 与 RDMA 的比较}{\enspace Comparison of DMA and RDMA}
         \label{fig:DMA-RDMA}
     \end{figure}
 
