@@ -1,5 +1,6 @@
 \chapter{RDMA 通信栈的设计与实现}\label{chap:RDMA}{
-    本章主要介绍 M-JIAJIA系统中 RDMA 通信栈的架构设计与实现方案。作为通信层组件，RDMA 通信栈与 UDP 通信栈均可用于完成系统消息通信任务，用户可根据底层通信环境在系统运行前通过 .jiaconf 配置实现通信栈的动态切换。在架构设计上，RDMA 和 UDP 通信栈均采用多线程设计，但由于 RDMA通信栈与底层网络适配器深度集成，在实现上与 UDP 通信栈呈现显著差异。
+    本章主要介绍 M-JIAJIA系统中 RDMA 通信栈的架构设计与实现方案。作为通信层组件，RDMA 通信栈与 UDP 通信栈均可完成系统消息通信任务，用户可根据底层通信环境在系统运行前通过 .jiaconf 配置实现通信栈的动态切换。
+    在架构设计上，RDMA 和 UDP 通信栈均采用多线程设计，但由于 RDMA通信栈与底层网络适配器深度集成，在实现上与 UDP 通信栈呈现显著差异。
 
     RDMA 通信首先需要根据应用场景选择合适的通信模式和通信原语，并基于所选模式和原语构建 RDMA 通信管理器，以管理所需的通信资源。随后，根据通信链路模式执行建连后通信或无连接通信。
 
@@ -7,18 +8,8 @@
 
     \subsection{RDMA 通信模式与通信原语选择}
 
-    M-JIAJIA 在可靠连接（RC）模式下采用 Send 原语进行消息传递，这一设计选择主要基于考虑M-JIAJIA 对通信可靠性要求严格。
+    M-JIAJIA 在可靠连接（RC）模式下采用 Send 原语进行消息传递，这一设计选择主要原因是M-JIAJIA 对通信可靠性要求严格。
     RC 模式免除了应用层的分片处理，同时还具有可靠性与有序性保障，从而大大简化了系统设计。
-
-    % 图~\ref{fig:mjiajia-send-recv}显示了 RC 模式下使用 Send 原语发送固定大小消息的示例，图中省略了队列对之间的私有连接以及完成队列元素的生成与处理。为了实现图示通信，M-JIAJIA 采用 RDMA CM 完成建连操作。而且考虑到发送与接收的差异，M-JIAJIA 使用公共输出队列与连接私有输入队列的方案来降低消息队列空间占用。此外，M-JIAJIA 应用多线程优化通信架构设计，以提升整体性能。
-    % \begin{figure}[H]
-    %     \centering
-    %     \includegraphics[width=\textwidth]{Img/RDMA通信栈可靠链接.drawio.pdf}
-    %     \bicaption{\enspace RDMA 通信栈可靠连接 Send 示例}{\enspace RDMA communication stack reliable connection Send example}
-    %     \label{fig:mjiajia-send-recv}
-    % \end{figure}
-
-
 
     \subsection{RDMA 通信管理器设计}
 
@@ -49,23 +40,6 @@
                   \item \textbf{RDMA 建立连接线程标识}：M-JIAJIA 采用客户端-服务器模式建立连接。在建连阶段，节点分别创建客户端和服务器线程以完成连接。其建连方案具有独特性：每个节点至多创建一个服务器线程用于监听连接请求，同时可创建多个客户端线程主动发起连接。线程标识用于存储和管理线程的信息，便于线程创建、同步和管理。
               \end{itemize}
     \end{enumerate}
-
-    % \subsection{RDMA 通信栈组成模块}
-
-    % 为构建基于 RDMA 可靠连接（RC）的通信系统，RDMA 通信栈的初始化流程分为以下四个主要阶段（如图~\ref{fig:mjiajia-rdma-modules}右侧所示）：
-    % \begin{enumerate}[label=\arabic*.]
-    %     \item 初始化上下文。包括获取设备列表、选择硬件设备、打开设备获取上下文、配置物理端口以及输入/输出消息队列初始化等步骤。
-    %     \item 建立连接。通过创建线程向其他主机发起建连请求、并响应其他主机的连接请求，完成任意两节点之间的建连。
-    %     \item 初始化通信资源。主要用于注册输入/输出内存区域（MR）。
-    %     \item 多线程通信。创建线程分别负责下发发送/接收工作请求（WR），同时创建专门处理消息的线程，以优化通信效率。
-    % \end{enumerate}
-
-    % \begin{figure}[!htbp]
-    %     \centering
-    %     \includegraphics[width=\textwidth]{Img/MJIAJIA通信栈.drawio.pdf}
-    %     \bicaption{\enspace M-JIAJIA 通信栈}{\enspace M-JIAJIA communication stack}
-    %     \label{fig:mjiajia-rdma-modules}
-    % \end{figure}
 
     \section{可靠通信连接建立机制}\label{sec:可靠通信连接建立机制}
 
@@ -135,7 +109,7 @@
 
     \section{RDMA 多线程通信架构设计}\label{sec:RDMA 多线程通信架构设计}
 
-    RDMA通信站与UDP通信栈类似的架构，将通信任务划分为发送、接收和处理三个子任务，并为每个子任务分配独立线程执行，以提高并发效率。
+    RDMA通信栈与UDP通信栈类似的架构，将通信任务划分为发送、接收和处理三个子任务，并为每个子任务分配独立线程执行，以提高并发效率。
     见图~\ref{fig:RDMA-communication-design}。
 
     \begin{figure}[H]

@@ -1,7 +1,12 @@
 \chapter{软件分布式共享内存系统与RDMA技术介绍}\label{chap:sdsm}{
     本文研究的基础主要包括软件分布式共享内存系统的实现和远程直接内存访问(RDMA)技术两个方面，本章将分别对这两项技术进行系统性阐述。
     针对软件分布式共享内存系统，将介绍其关键技术，即内存一致性以及系统的实现层次；
-    针对 RDMA 技术，将主要介绍其通信原理、RDMA 实现与相关通信库以RDMA通信编程方面的内容。
+    针对 RDMA 技术，将主要介绍其通信原理、RDMA 实现与相关通信库以及RDMA通信编程方面的内容。
+
+    同时本章将对软件分布式共享内存系统JIAJIA简短介绍。JIAJIA 是一个国产软件 DSM 系统，本身主要基于共享内存系统技术与UDP技术搭建而成，
+    以页为共享粒度，在物理分离的内存上提供逻辑共享的虚拟内存。
+    系统以用户库的形式提供给开发人员，开发人员可以使用 jia.h 头文件提供的接口编写采用分布式共享内存范式的并行程序，
+    并使用 .jiahosts 配置文件设置参与分布式系统的节点组成，本文的主要工作也在JIAJIA系统上开展。
 
     \section{软件分布式共享内存关键技术}\label{软件分布式共享内存关键技术}
 
@@ -26,22 +31,6 @@
               面向 C 的 UPC~\citep{bonachea2013UPC}（Unified Parallel C）以及面向 C++ 的 UPC++~\citep{bachan2019upc++}。
               与传统 DSM 系统的区别在于显式远程数据访问，程序员需明确指定数据来源。实现上依赖编译器和通信中间件层（如 GASNet~\citep{Bonachea2018GASNetEX}）支持。
     \end{itemize}
-
-    % \begin{figure}
-    %     \centering
-    %     \includegraphics[width=0.3\textwidth]{Img/GASNet.drawio.pdf}
-    %     \bicaption{\enspace GASNet 层系统图}{\enspace GASNet layer disgram}
-    %     \label{fig:GASNET}
-    % \end{figure}
-
-    % \subsection{通信机制}
-    % 软件 DSM 系统依赖底层的消息传递机制来实现上层的虚拟共享抽象。不同网络环境和协议实现的消息传递机制在通信流程和开销上展现出显著差异。
-
-    % \begin{enumerate}
-    %     \item 为了追求更高的性能和可扩展性，传统 DSM 系统通常更倾向于采用低延迟的 UDP。
-    %           在此基础上，可以分为由SIGIO信号驱动的单线程模型，和采用划分通信任务的多线程模型；
-    %     \item RDMA 网络为现代软件 DSM 系统通信提供性能优势。在UDP的基础上，高带宽、低延迟的特性极大的降低了通信传输延迟；
-    % \end{enumerate}
 
     \subsection{内存一致性模型}
     内存一致性模型限制了系统可以执行内存访问的顺序。维护内存一致性是软件 DSM 系统的关键问题，核心在于何时以及如何传播对共享内存的更新。
@@ -130,13 +119,6 @@
     RDMA 支持四种通信链路模式，分别是：
     可靠连接（RC）、不可靠连接（UC）、不可靠数据报（UD）、可靠数据报（RD）。这四种模式的通信特点如下：
 
-    % \begin{figure}[!htbp]
-    %     \centering
-    %     \includegraphics[width=\linewidth]{Img/RDMA队列对.drawio.pdf}
-    %     \bicaption{\enspace RDMA 队列对}{\enspace RDMA Queue Pairs}
-    %     \label{fig:rdma-queue-pairs}
-    % \end{figure}
-
     \begin{itemize}
         \item \textbf{RC 模式}： RC 模式采用面向连接的方式，提供可靠且有序的传输服务。
               通信开始前，需要在通信双方的RC QPs之间建立私有连接。连接建立后，双方将以消息为基本单元进行通信。
@@ -160,27 +142,27 @@
               RDMA 原子操作适合需要强一致性保证和低延迟并发控制的场景，RDMA Read 和 RDMA Write 可以绕过远端CPU，将大量数据直接读取或写入指定的内存位置。
     \end{itemize}
 
-    表~\ref{tab:mode-verbs}展示了 RDMA 通信模式和通信原语的支持关系。
+    % 表~\ref{tab:mode-verbs}展示了 RDMA 通信模式和通信原语的支持关系。
 
-    \begin{table}[!htbp]
-        \footnotesize% fontsize
-        \setlength{\tabcolsep}{4pt}% column separation
-        \renewcommand{\arraystretch}{1.5}% row space 
-        \centering
-        \begin{tabular}{lcccc}
-            \hline
-            %\multicolumn{num_of_cols_to_merge}{alignment}{contents} \\
-            %\cline{i-j}% partial hline from column i to column j
-               & Send/Recv  & RDMA Write & RDMA Read  & RDMA Atomic \\
-            \hline
-            RC & \checkmark & \checkmark & \checkmark & \checkmark  \\
-            UC & \checkmark & \checkmark & \times     & \times      \\
-            UD & \checkmark & \times     & \times     & \times      \\
-            \hline
-        \end{tabular}
-        \bicaption{\enspace RDMA 通信模式与通信原语的关系}{\enspace Relation between RDMA communication mode and verbs}% caption
-        \label{tab:mode-verbs}
-    \end{table}
+    % \begin{table}[!htbp]
+    %     \footnotesize% fontsize
+    %     \setlength{\tabcolsep}{4pt}% column separation
+    %     \renewcommand{\arraystretch}{1.5}% row space 
+    %     \centering
+    %     \begin{tabular}{lcccc}
+    %         \hline
+    %         %\multicolumn{num_of_cols_to_merge}{alignment}{contents} \\
+    %         %\cline{i-j}% partial hline from column i to column j
+    %            & Send/Recv  & RDMA Write & RDMA Read  & RDMA Atomic \\
+    %         \hline
+    %         RC & \checkmark & \checkmark & \checkmark & \checkmark  \\
+    %         UC & \checkmark & \checkmark & \times     & \times      \\
+    %         UD & \checkmark & \times     & \times     & \times      \\
+    %         \hline
+    %     \end{tabular}
+    %     \bicaption{\enspace RDMA 通信模式与通信原语的关系}{\enspace Relation between RDMA communication mode and verbs}% caption
+    %     \label{tab:mode-verbs}
+    % \end{table}
 
     \newpage
     \subsection{RDMA 通信流程}\label{sec:process}
@@ -229,35 +211,8 @@
               从上述流程中可以看出，不同于Read/Write操作，Send/Recv 操作需要接收方 CPU 的参与。
     \end{enumerate}
 
-    % 相比于RDMA Read， Send/Recv 和 RDMA Write 不需要网卡发回数据包，因此在传输小数据报时，
-    % RDMA Write 和 Send/Recv 的传输延迟大约是 RDMA Read 的一半~\citep{kalia2014herd}（见图~\ref{fig:RDMA-Verbs-Latency}）。
-    % \begin{figure}[!htbp]
-    %     \centering
-    %     \includegraphics[width=\linewidth]{Img/verbs-latency.png}
-    %     \bicaption{\enspace RDMA Verbs 通信延迟比较}{\enspace Comparison of Communication Latency of RDMA Verbs}
-    %     {\small Note: 在Mellanox ConnectX-3 Pro 网卡可靠连接下的测试}
-    %     \label{fig:RDMA-Verbs-Latency}
-    % \end{figure}
-
     \subsection{RDMA 通信建连销毁流程}
 
-    % 在传统通信模式中，主要有三种通信方式：
-    % \begin{enumerate}
-    %     \item 基于TCP协议的流式套接字（stream socket）
-    %     \item 基于UDP协议的数据报套接字（datagram socket）
-    %     \item 绕过传输层的原始套接字（raw socket）
-    % \end{enumerate}
-
-    % 见图~\ref{fig:Socket-Type}。
-    % 在传统网络编程实践中，传输层协议的选择不仅决定socket的类型，还深刻影响整个通信子系统的设计，主要体现在连接管理、数据传输、错误处理等方面。
-    % \begin{figure}[!htbp]
-    %     \centering
-    %     \includegraphics[width=0.35\linewidth]{Img/三种socket类型.drawio.pdf}
-    %     \bicaption{\enspace 三种 Socket 类型}{\enspace The Three Socket Types}
-    %     \label{fig:Socket-Type}
-    % \end{figure}
-
-    % 相比socket通信，RDMA 通信需要开发者深入了解底层网络协议与硬件特性。通信流程如下（以可靠连接为例）：
     \begin{enumerate}[label=\textbf{步骤 \arabic*.}, leftmargin=0.5cm, align=left]
         \item \textbf{RDMA建立连接}
               \begin{itemize}
@@ -277,9 +232,122 @@
               逆序销毁队列对、完成队列、内存区域等对象，释放保护域并关闭设备。
     \end{enumerate}
 
+    \section{软件分布式共享内存系统 JIAJIA}\label{软件分布式共享内存系统 JIAJIA}
+    \subsection{设计架构}
+
+    程序运行时，JIAJIA系统将会拷贝应用程序和配置文件到所有参与节点，随后并行执行协同完成任务。
+
+    \begin{enumerate}[label=\arabic*.]
+        \item \textbf{初始化模块。}初始化模块用于对整个系统进行准备操作，负责加载配置文件（.jiahosts，.jiaconfig）以及初始化各个模块。
+
+        \item \textbf{内存管理器。} JIAJIA 采用 NUMA 结构，是一个基于宿主（home-based）的系统，每个共享页都有对应的宿主节点核心包含三个数据结构：用于记录本地分配的共享页的目录（home），用于记录缓存页状态的缓存目录（cache），用于记录全部共享页的页目录（page）。JIAJIA 的内存组织如图~\ref{fig:JIAJIA-memory}所示。
+              \begin{figure}[!htbp]
+                  \centering
+                  \includegraphics[width=0.86\textwidth]{Img/JIAJIA内存组织.drawio.pdf}
+                  \bicaption{\enspace JIAJIA 内存组织}{\enspace JIAJIA memory structure}
+                  \label{fig:JIAJIA-memory}
+              \end{figure}
+
+        \item \textbf{SIGSEGV 信号处理程序。} JIAJIA 系统中任何节点都可以透明地访问任一共享内存位置。这一机理利用了操作系统的信号机制：当应用程序试图访问无权限内存时，将触发段违例信号（SIGSEGV），操作系统将捕获该信号并将其发送给预设的 SIGSEGV 信号处理程序。该程序将完成对本地内存的授权或对远程内存的取页操作。如图~\ref{fig:JIAJIA-access}所示。
+              \begin{figure}[!htbp]
+                  \centering
+                  \includegraphics[width=0.68\textwidth]{Img/JIAJIA访问远端内存.drawio.pdf}
+                  \bicaption{\enspace JIAJIA 访问远端内存}{\enspace JIAJIA }
+                  \label{fig:JIAJIA-access}
+              \end{figure}
+
+        \item \textbf{通信管理器。} JIAJIA 使用通信管理器记录并管理发送和接收的套接字描述符。
+
+              \begin{figure}[!htbp]
+                  \centering
+                  \includegraphics[width=0.4\textwidth]{Img/JIAJIA底层消息传递机制.drawio.pdf}
+                  \bicaption{\enspace JIAJIA 底层消息传递机制}{\enspace JIAJIA underlying message passing mechanism}
+                  \label{fig:JIAJIA-message-handle}
+              \end{figure}
+        \item \textbf{消息处理程序。} JIAJIA 底层基于消息传递机制，消息处理程序主要负责处理接收到的本地或远程消息，并根据消息类型执行相应的操作。
+              如图~\ref{fig:JIAJIA-message-handle}。
+
+        \item \textbf{锁管理器。}
+              锁管理器主要负责同步变量的分配管理，如图~\ref{fig:JIAJIA-lock-manager}。JIAJIA 支持两种同步变量：锁（lock）和屏障（barrier），处理方式如下：
+              \begin{itemize}
+                  \item 对于锁同步变量，锁管理器维护一个先入先出队（FIFO）队列，按请求顺序依次授予锁权限；
+                  \item 对于屏障同步变量，锁管理器通过计数器判断所有节点是否抵达相同位置，并在全部到达后统一授予继续运行的权限。
+              \end{itemize}
+              \begin{figure}[!htbp]
+                  \centering
+                  \includegraphics[width=1.0\textwidth]{Img/JIAJIA锁管理器.drawio.pdf}
+                  \bicaption{\enspace JIAJIA 锁管理器分布}{\enspace JIAJIA lock-managers layout}
+                  \label{fig:JIAJIA-lock-manager}
+              \end{figure}
+    \end{enumerate}
+
+    % \newpage
+    \subsection{基于锁的缓存一致性协议}
+    在内存一致性模型方面，JIAJIA 采用域一致性模型，并实现了一种基于锁的缓存一致性协议。该协议支持写失效的传播策略，并利用多写协议来避免假共享。
+
+    JIAJIA 使用同步变量将应用程序分割为一个个一致性域（或称为临界区间），每到达一个同步原语都代表一个旧临界区间的结束，以及新临界区间的开始。
+    每次在一个临界区间结束时，将传播在该临界区中对共享页做的修改给相应的宿主节点。
+
+    JIAJIA 基于锁的一致性协议的特点是它将一个临界区域内对共享页的修改信息（写通知，write-notice）与锁绑定，
+    write-notice 记录了修改页的地址（见图~\ref{fig:JIAJIA-lockstack}），获取锁的处理机将根据锁管理器中的 write-notice 得知哪些页面已被其他处理机修改。
+    在处理临界区嵌套情况时，JIAJIA 使用堆栈结构来记录锁的嵌套，获取锁时压栈，释放锁时弹栈，
+    弹栈时将把栈顶锁的 write-notice 合并到下一层，同时把栈顶的write-notice发送给对应的锁管理器。
+
+    \begin{figure}[!htbp]
+        \centering
+        \includegraphics[width=0.6\textwidth]{Img/JIAJIA锁栈结构.drawio.pdf}
+        \bicaption{\enspace JIAJIA 锁栈结构}{\enspace JIAJIA lockstack layout}
+        \label{fig:JIAJIA-lockstack}
+    \end{figure}
+
+    每当JIAJIA系统进行同步操作时，主机会将当前临界区修改的地址对应的write-notice信息记录到当前栈顶的锁上，
+    并将修改的内容发送到对应的主机上(修改home节点内容)。
+    jia\_unlock或jia\_barrier操作时，主机会在弹栈的同时将栈顶锁的write-notice发送给对应的锁管理器，方便其他主机同步;
+    jia\_lock或jia\_barrier操作时，主机也会从对应的锁管理器拿到相应的write-notice信息，并将本地的对应的页面无效化。
+
+    以jia\_barrier为例，下图是jia\_barrier时同步操作的流程：
+
+    假设初始状态是(host1为local主机，图中红色(黄色)代表了对某一个页面的一种修改，白色代表没有修改)：
+    \begin{itemize}
+        \item page1: home节点在host1，主机2与主机3修改，远程有备份；
+        \item page2: home节点在host1，主机1修改，远程有备份；
+        \item page3: home节点在host2，主机1修改，远程有备份；
+    \end{itemize}
+    \begin{enumerate}[label=\arabic*.]
+
+        \item senddiffs操作时，若远程主机修改了页面(即不为该页面的home主机)，将会计算本地修改的内容，并将diff消息打包后发送给home主机进行处理更新。
+              如果有两台主机进行了修改，则发送的先后顺序是不确定的。若要求有确定的执行顺序，
+              需要由编程人员保证同一临界区间内同一页面只有一台主机进行了修改。(图~\ref{fig:JIAJIA-barrier1})
+
+              \begin{figure}[!htbp]
+                  \centering
+                  \includegraphics[width=0.8\textwidth,page=1]{Img/jiajia_barr_sync.drawio.pdf}
+                  \bicaption{\enspace JIAJIA barrier同步操作}{\enspace JIAJIA barrier sync1}
+                  \label{fig:JIAJIA-barrier1}
+              \end{figure}
+
+        \item sendwtnts操作时，每台主机将本地锁栈顶端锁记录的wtnts发送给对应的锁管理器。对于barrier的情况，将有hidelock(64号锁)担任此角色。
+              对应的锁管理器，如果在发送过来的wtnts中发现对某一页面有不同主机的修改，则记录frompid为Maxhosts，
+              否则记录为对应的主机。(图~\ref{fig:JIAJIA-barrier1})
+
+        \item barrserver处理消息时，锁管理器向对应页面的所有主机发送invalidate消息无效页面，所有主机中记录的cache页面都将被无效，
+              而对应的home主机会根据发送来的消息确定在本次barrier对应的临界区间中是否有远程主机对该页面进行过修改，
+              从而修改本地页面wtnt，并释放锁栈顶部锁的wtnts。(图~\ref{fig:JIAJIA-barrier2})
+        \item startinterval开启新的临界区间，所有的页面都将被置为RO状态，确保下一个临界区间会进行相应的页面记录。(图~\ref{fig:JIAJIA-barrier2})
+
+              \begin{figure}[!htbp]
+                  \centering
+                  \includegraphics[width=0.8\textwidth]{Img/jiajia_barrier_sync2.drawio.pdf}
+                  \bicaption{\enspace JIAJIA barrier同步操作}{\enspace JIAJIA barrier sync2}
+                  \label{fig:JIAJIA-barrier2}
+              \end{figure}
+    \end{enumerate}
+
     \section{本章小结}
 
     本章 \ref{软件分布式共享内存关键技术} 节介绍了 软件分布式共享内存系统的实现层次，通信机制和内存一致性模型。
 
     本章 \ref{RDMA 技术介绍} 节介绍了 RDMA技术的基本原理和用法。
+
+    本章 \ref{软件分布式共享内存系统 JIAJIA} 主要介绍了 JIAJIA 的关键技术，即设计架构和基于锁的一致性的实现。
 }

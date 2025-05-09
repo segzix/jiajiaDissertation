@@ -61,39 +61,12 @@
     jia\_exit 用于收集所有远程节点的统计信息，并在释放系统资源后退出。
     \subsection{同步操作}
     M-JIAJIA 提供两种同步原语 jia\_lock 和 jia\_barrier 和一种等待原语 jia\_wait，与JIAJIA系统保持一致。
-    相比与JIAJIA的改动体现在采用多线程进行多主机同步操作，使用原子操作与信号量等同步原语来保证线程间的同步一致性。
+    相比于JIAJIA的改动体现在采用多线程进行多主机同步操作，使用原子操作与信号量等同步原语来保证线程间的一致性。
 
     \subsection{消息传递接口}
-    消息传递接口用于分布式编程中节点之间的显式通信。相比与JIAJIA系统，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv。
+    消息传递接口用于分布式编程中节点之间的显式通信。相比于JIAJIA系统，M-JIAJIA 支持类消息传递的接口 jia\_send 和 jia\_recv。
     jia\_send 用于向特定主机发送指定数据，而 jia\_recv 负责接收来自其他主机的消息，
     在通信层可以使用 UDP ， IPoIB 或 RDMA 通信栈进行通信。
-
-    %     \newpage
-    %     \subsection{模板与使用说明}
-    %     接口层的介绍将以一个 M-JIAJIA 的模板结束，如列表~\ref{lst:jia-template}所示。利用 M-JIAJIA 接口编程存在两个基本注意点：
-    %     \begin{itemize}
-    %         \item 所有程序均需要以 jia\_init 和 jia\_exit 完成系统的初始化和退出。
-    %         \item 除消息传递接口，锁同步操作外，所有其他接口必须全局执行，不可依赖条件语句。
-    %     \end{itemize}
-    %     \begin{lstlisting}[style=CStyle, caption={M-JIAJIA 应用模板}, label={lst:jia-template}]
-    % #include <jia.h>
-    % int main(int argc, char **argv) {
-    %     jia_init(argc, argv);   // 系统初始化
-
-    %     jia_alloc(size);
-
-    %     ...  // 共享内存初始化操作
-
-    %     jia_barrier();  // 同步操作    
-
-    %     jia_lock(lockid);
-    %     // 临界区操作
-    %     jia_unlock(lockid);
-
-    %     jia_exit(); // 系统退出
-    %     return 0;
-    % }
-    %     \end{lstlisting}
 
     \subsection{核心模块设计}
     核心模块层主要由系统的核心处理逻辑组成，负责管理关键数据结构。
@@ -102,7 +75,7 @@
 
     \section{M-JIAJIA优化设计}\label{sec:M-JIAJIA优化设计}
     \subsection{通信栈优化}
-    M-JIAJIA 分层设计分离了通信任务和系统任务，系统任务只需与消息队列交互即可完成消息的发送与接收，而通信层负责具体的消息传输。
+    M-JIAJIA 分层设计分离了通信任务和系统任务。系统层只需与消息队列交互即可完成消息的发送与接收，而通信层负责具体的消息传输。
     通信层支持两种独立的通信协议栈：传统的 UDP 通信栈和 RDMA 通信栈。对于这两个通信栈，M-JIAJIA均作出了相对于JIAJIA的优化设计。
 
     \subsubsection{UDP 通信栈设计}
@@ -311,17 +284,6 @@
     M-JIAJIA 的缓存策略是将远端页缓存至本机相同的虚拟地址空间，即共享地址为 addr 的远端页将在本机的 addr 虚拟地址上进行缓存。
 
     M-JIAJIA 的预取策略是在远程取页时，提前获取远端节点上分配的后续几页共享页，缓存至本地并赋予读权限，从而提升访问效率。
-
-    % 具体实现方案依赖于三个变量：预取开关（prefetch）、预取页数（prefetch\_pages）和最大检查页数（max\_checking\_pages）。预取的触发条件是：
-    % $$
-    %     \left\{
-    %     \begin{aligned}
-    %          & \texttt{prefetch = on},           \\
-    %          & \texttt{prefetch\_pages > 0},     \\
-    %          & \texttt{max\_checking\_pages > 0}
-    %     \end{aligned}
-    %     \right.
-    % $$
 
     在启用预取的情况下，远端节点在接收到读取页请求后，根据指定的参数向后检查相邻页是否是共享页，
     并打包相邻的共享页一同返回节点。预取优化的效果取决于两次消息传递获取写权限的模式出现的概率以及共享内存的分配策略。
